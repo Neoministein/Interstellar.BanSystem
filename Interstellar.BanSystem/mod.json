@@ -1,9 +1,18 @@
 {
 	"Name" : "Interstellar.ServerBanSystem",
 	"Description" : "Allows the disabling of Titans,Boosts,Pilot Abiliteys And Grenades with Auto Replacements ",
-    "Version": "1.1.2",
+    "Version": "2.0.0",
 	"LoadPriority": 0,
-
+	"ConVars": [
+		{
+			"Name": "grant_admin",
+			"DefaultValue": ""
+		},
+        {
+			"Name": "ban_config",
+			"DefaultValue": ""
+		}
+	],
 	"Scripts": [
         {
             "Path": "ui/menu_ns_custom_match_settings_ban.nut",
@@ -22,7 +31,7 @@
         {
             "Path": "_HudMessageLogic.gnut",
             "RunOn": "SERVER && MP"
-        },		
+        },
         {
 			"Path": "_banLogic.gnut",
             "RunOn": "SERVER && MP",

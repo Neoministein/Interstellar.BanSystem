@@ -1,6 +1,7 @@
 global function AddNorthstarCustomMatchSettingsBanMenu
 global function OnMenu_Open
 global function OpenBanMenu
+global function ImportBanConfig
 
 struct BoolAttributte {
   bool disabled = false
@@ -22,7 +23,7 @@ struct Loadout {
     int selectedAtr2 = 0
 
     ArrayAttribute &atr0
-    ArrayAttribute &atr1 
+    ArrayAttribute &atr1
     ArrayAttribute &atr2
 }
 
@@ -35,8 +36,8 @@ struct Category {
 struct PilotDisplay {
   var loadoutDisplay
 
-  array< BoolAttributte > attributes 
-} 
+  array< BoolAttributte > attributes
+}
 
 struct LoadoutDisplay {
   var loadoutDisplay
@@ -47,14 +48,14 @@ struct LoadoutDisplay {
 
   array<var> buttons = []
   array<Category> categories
-  array<var> displays 
-} 
+  array<var> displays
+}
 
 struct BoostDisplay {
   var loadoutDisplay
 
-  array< BoolAttributte > boosts 
-} 
+  array< BoolAttributte > boosts
+}
 
 struct {
   var menu
@@ -74,9 +75,9 @@ void function AddNorthstarCustomMatchSettingsBanMenu()
 {
    AddMenu("CustomMatchBanSettingsMenu", $"resource/ui/menus/custom_match_settings_ban.menu", InitNorthstarCustomMatchSettingsBanMenu, "#MENU_MATCH_SETTINGS")
    AddSubmenu( "customSelectMenu", $"resource/ui/menus/modselect.menu", InitCustomSelectMenu )
-}  
+}
 
-void function OpenBanMenu() 
+void function OpenBanMenu()
 {
   AdvanceMenu( GetMenu( "CustomMatchBanSettingsMenu" ) )
 }
@@ -85,7 +86,7 @@ void function InitNorthstarCustomMatchSettingsBanMenu()
 {
   file.menu = GetMenu( "CustomMatchBanSettingsMenu" )
   AddMenuEventHandler( file.menu, eUIEvent.MENU_OPEN, OnMenu_Open )
-  
+
   AddCustomPrivateMatchSettingsCategory("#BAN_PAGE", "CustomMatchBanSettingsMenu")
 
   AddMenuFooterOption( file.menu, BUTTON_B, "#B_BUTTON_BACK", "#BACK" )
@@ -94,9 +95,9 @@ void function InitNorthstarCustomMatchSettingsBanMenu()
 
   AddButtonEventHandler( Hud_GetChild(file.menu, "Export"), UIE_CLICK, exportConfigToString )
   AddButtonEventHandler( Hud_GetChild(file.menu, "Import"), UIE_CLICK, importConfigToString )
-  
+
   file.loadoutDisplays = GetElementsByClassname( file.menu, "loadoutDisplay" )
-  
+
   initPilot()
   initWeapon()
   initTitan()
@@ -110,15 +111,15 @@ void function InitNorthstarCustomMatchSettingsBanMenu()
 
   selectButton(file.buttons, 2, 0)
   selectDisplay(file.loadoutDisplays, 2, 0)
-  
-  foreach (var button in file.buttons ) 
+
+  foreach (var button in file.buttons )
   {
     AddButtonEventHandler( button, UIE_CLICK, callChangeMainDisplay )
     Hud_SetVisible( button, true)
 	}
 }
 
-void function OnMenu_Open() 
+void function OnMenu_Open()
 {
   AddMenuFooterOption( file.menu, BUTTON_B, "#B_BUTTON_BACK", "#BACK" )
   reloadCurrentScreen()
@@ -130,10 +131,10 @@ void function InitCustomSelectMenu()
   file.subMenu = menu
 
   array<var> modButton = GetElementsByClassname( menu, "ModSelectClass" )
-  for(int i = 0; i < modButton.len(); i++) 
+  for(int i = 0; i < modButton.len(); i++)
   {
     AddButtonEventHandler( modButton[i], UIE_CLICK, clickSelectInSubmenu )
-  } 
+  }
 
 	var screen = Hud_GetChild( menu, "Screen" )
 	var rui = Hud_GetRui( screen )
@@ -167,7 +168,7 @@ void function clickOpenSubMenu(var pressedButton) {
 
 	array<var> buttons = GetElementsByClassname( menu, "ModSelectClass" )
 
-  int uiElementId = int(Hud_GetScriptID( Hud_GetParent( pressedButton ) ) )  
+  int uiElementId = int(Hud_GetScriptID( Hud_GetParent( pressedButton ) ) )
   int buttonSelected = int(Hud_GetScriptID( pressedButton ))
 
   array<asset> items
@@ -175,9 +176,9 @@ void function clickOpenSubMenu(var pressedButton) {
 
   //This defines the screen which calls this button so that weapons and titans can use the same logic
   LoadoutDisplay loadout
-  if (file.selected == 1) { 
+  if (file.selected == 1) {
     loadout = file.weapon
-  } else if (file.selected == 2) { 
+  } else if (file.selected == 2) {
     loadout = file.titan
   }
 
@@ -194,7 +195,7 @@ void function clickOpenSubMenu(var pressedButton) {
     items = loadout.categories[loadout.categorySelected].loadouts[uiElementId].atr2.images
     currentlySelected = loadout.categories[loadout.categorySelected].loadouts[uiElementId].selectedAtr2
   }
-	
+
 	int maxRowCount = 4
 	int numItems = items.len()
 	int displayRowCount = int( ceil( numItems / 2.0 ) )
@@ -225,7 +226,7 @@ void function clickOpenSubMenu(var pressedButton) {
   thread RestoreHiddenElemsOnMenuChange()
 }
 
-void function clickSelectInSubmenu(var pressedButton) 
+void function clickSelectInSubmenu(var pressedButton)
 {
   OnModSelectBGScreen_Activate(null)
   int modSelected = rearangeIntToButton(int(Hud_GetScriptID( pressedButton )))
@@ -250,8 +251,8 @@ void function clickSelectInSubmenu(var pressedButton)
   } else {
     loadout.selectedAtr2 = modSelected
   }
-  
-  SendLoadoutChangesToServer(uiType, loadoutDisplay.categorySelected, loadoutDisplay.selectedLoadout, ParseLoadoutToDataString(loadout, loadoutDisplay.categorySelected)) 
+
+  SendLoadoutChangesToServer(uiType, loadoutDisplay.categorySelected, loadoutDisplay.selectedLoadout, ParseLoadoutToDataString(loadout, loadoutDisplay.categorySelected))
 
   reloadActiveUI()
 }
@@ -284,7 +285,7 @@ int function rearangeButtonTwoInt(int value) {
     case 7:
       return 7
   }
-  return 0 
+  return 0
 }
 
 int function rearangeIntToButton(int value) {
@@ -306,14 +307,14 @@ int function rearangeIntToButton(int value) {
     case 7:
       return 7
   }
-  return 0 
+  return 0
 }
 
 void function HideSubmenuBackgroundElems()
 {
   int subLoadout
   array<var> elems
-  if(file.selected == 1) 
+  if(file.selected == 1)
   {
     elems = GetElementsByClassname( file.menu, "HideWhenEditing_" + file.weapon.selectedAttribute )
     subLoadout = file.weapon.selectedLoadout
@@ -334,7 +335,7 @@ void function RestoreHiddenSubmenuBackgroundElems()
 	classnames.append( "HideWhenEditing_0" )
 	classnames.append( "HideWhenEditing_1" )
   classnames.append( "HideWhenEditing_2" )
-	
+
 
 	foreach ( classname in classnames )
 	{
@@ -344,7 +345,7 @@ void function RestoreHiddenSubmenuBackgroundElems()
 			Hud_Show( elem )
 	}
   //This is here to not show the sights on weapon categories without sights
-  if(file.weapon.categorySelected > 4 && file.selected == 1) 
+  if(file.weapon.categorySelected > 4 && file.selected == 1)
   {
     array<var> elems = GetElementsByClassname( file.menu , "HideWhenNoVisor" )
 	  foreach ( elem in elems )
@@ -375,13 +376,13 @@ void function callChangeMainDisplay( var pressedButton )
   }
 }
 
-void function reloadCurrentScreen() 
+void function reloadCurrentScreen()
 {
   UpdateBanData()
   reloadActiveUI()
 }
 
-void function reloadActiveUI() 
+void function reloadActiveUI()
 {
   if (file.selected == 0) {
     reloadPilotScreen()
@@ -395,36 +396,36 @@ void function reloadActiveUI()
   RestoreHiddenSubmenuBackgroundElems()
 }
 
-void function callPilotButtonClick(var pressedButton) 
+void function callPilotButtonClick(var pressedButton)
 {
-  int id = int( Hud_GetScriptID( pressedButton ) ) 
+  int id = int( Hud_GetScriptID( pressedButton ) )
   BoolAttributte attribute = file.pilot.attributes[ id ];
   switchBoolAttribute(pressedButton ,attribute)
 
   SendChangesToServer("ability", id, (attribute.disabled ? "1" : "0"))
 }
 
-void function callBoostClick(var pressedButton) 
+void function callBoostClick(var pressedButton)
 {
-  int id = int( Hud_GetScriptID( pressedButton ) ) 
+  int id = int( Hud_GetScriptID( pressedButton ) )
   BoolAttributte attribute = file.boost.boosts[ id ];
   switchBoolAttribute(pressedButton, attribute)
 
   SendChangesToServer("boost", id, (attribute.disabled ? "1" : "0"))
 }
 
-void function callLoadoutButtonClick(var pressedButton) 
+void function callLoadoutButtonClick(var pressedButton)
 {
   int id = int(Hud_GetScriptID( Hud_GetParent( pressedButton ) ) )
   LoadoutDisplay loadoutDisplay
   string uiType
 
-  if(file.selected == 1) 
+  if(file.selected == 1)
   {
     loadoutDisplay = file.weapon
     uiType = "weapon"
-  } 
-  else 
+  }
+  else
   {
     loadoutDisplay = file.titan
     uiType = "titan"
@@ -439,12 +440,12 @@ void function callLoadoutButtonClick(var pressedButton)
   Hud_SetSelected( pressedButton , state )
 }
 
-void function callRestoreDefaults(var pressedButton) 
+void function callRestoreDefaults(var pressedButton)
 {
   setAllAttributes(true)
 }
 
-void function callBanAll(var pressedButton) 
+void function callBanAll(var pressedButton)
 {
   setAllAttributes(false)
 }
@@ -462,42 +463,42 @@ void function changeWeaponDisplay( var pressedButton )
     UpdateBanData()
     selectButton(file.weapon.buttons, file.weapon.categorySelected, selected)
     loadWeaponCategory(file.weapon.categories[selected])
-    
+
     file.weapon.categorySelected = selected
   }
 }
 
-void function loadWeaponCategory(Category category) 
+void function loadWeaponCategory(Category category)
 {
   for(int i = 0; i < file.weapon.displays.len();i++) {
       if(i < category.loadouts.len()) {
 
         Hud_SetSelected( Hud_GetChild( file.weapon.displays[i], "ButtonMain" ) , category.loadouts[i].disabled )
 
-        RuiSetImage( 
-          Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonMain" )), 
-          "buttonImage", 
+        RuiSetImage(
+          Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonMain" )),
+          "buttonImage",
           category.loadouts[i].image )
 
-        RuiSetImage( 
-          Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonAtr0" )), 
-          "buttonImage", 
+        RuiSetImage(
+          Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonAtr0" )),
+          "buttonImage",
           category.loadouts[i].atr0.images[category.loadouts[i].selectedAtr0] )
 
-        RuiSetImage( 
-          Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonAtr1" )), 
-          "buttonImage", 
-          category.loadouts[i].atr1.images[category.loadouts[i].selectedAtr1] )     
+        RuiSetImage(
+          Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonAtr1" )),
+          "buttonImage",
+          category.loadouts[i].atr1.images[category.loadouts[i].selectedAtr1] )
 
         if (category.loadouts[i].atr2.images.len() > 0) {
-          RuiSetImage( 
-            Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonAtr2" )), 
-            "buttonImage", 
-            category.loadouts[i].atr2.images[category.loadouts[i].selectedAtr2] )  
+          RuiSetImage(
+            Hud_GetRui( Hud_GetChild( file.weapon.displays[i], "ButtonAtr2" )),
+            "buttonImage",
+            category.loadouts[i].atr2.images[category.loadouts[i].selectedAtr2] )
 
-            Hud_SetVisible( Hud_GetChild( file.weapon.displays[i], "ButtonAtr2" ) , true )    
-        } 
-        else 
+            Hud_SetVisible( Hud_GetChild( file.weapon.displays[i], "ButtonAtr2" ) , true )
+        }
+        else
         {
           Hud_SetVisible( Hud_GetChild( file.weapon.displays[i], "ButtonAtr2" ) , false )
         }
@@ -517,7 +518,7 @@ void function changeTitanDisplay( var pressedButton )
     UpdateBanData()
     selectButton(file.titan.buttons, file.titan.categorySelected, selected)
     loadTitanCategory(file.titan.categories[selected])
-    
+
     file.titan.categorySelected = selected
   }
 }
@@ -528,54 +529,54 @@ void function loadTitanCategory(Category category) {
 
       Hud_SetSelected( Hud_GetChild( file.titan.displays[i], "ButtonMain" ) , category.loadouts[i].disabled )
 
-      RuiSetImage( 
-        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonMain" )), 
-        "buttonImage", 
+      RuiSetImage(
+        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonMain" )),
+        "buttonImage",
         category.loadouts[i].image )
 
-      RuiSetImage( 
+      RuiSetImage(
         Hud_GetRui( Hud_GetChild( file.titan.displays[i] ,"ButtonFrame")),
-        "basicImage", 
-        category.loadouts[i].image )  
+        "basicImage",
+        category.loadouts[i].image )
 
-      RuiSetImage( 
-        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonAtr0" )), 
-        "buttonImage", 
+      RuiSetImage(
+        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonAtr0" )),
+        "buttonImage",
         category.loadouts[i].atr0.images[category.loadouts[i].selectedAtr0] )
 
 
-      RuiSetImage( 
-        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonAtr1" )), 
-        "buttonImage", 
-        category.loadouts[i].atr1.images[category.loadouts[i].selectedAtr1] )     
+      RuiSetImage(
+        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonAtr1" )),
+        "buttonImage",
+        category.loadouts[i].atr1.images[category.loadouts[i].selectedAtr1] )
 
-      RuiSetImage( 
-        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonAtr2" )), 
-        "buttonImage", 
+      RuiSetImage(
+        Hud_GetRui( Hud_GetChild( file.titan.displays[i], "ButtonAtr2" )),
+        "buttonImage",
         category.loadouts[i].atr2.images[category.loadouts[i].selectedAtr2] )
 
       //Check if is Monarch Core Abilities
-      if(category.loadouts[i].name == "monarchCores") 
+      if(category.loadouts[i].name == "monarchCores")
       {
         Hud_SetVisible( Hud_GetChild( file.titan.displays[i], "ButtonMain" ) , false )
-        Hud_SetVisible( Hud_GetChild( file.titan.displays[i] ,"ButtonFrame" ) , false ) 
-        
-      } 
-      else 
+        Hud_SetVisible( Hud_GetChild( file.titan.displays[i] ,"ButtonFrame" ) , false )
+
+      }
+      else
       {
         Hud_SetVisible( Hud_GetChild( file.titan.displays[i], "ButtonMain" ) , true )
-        Hud_SetVisible( Hud_GetChild( file.titan.displays[i] ,"ButtonFrame" ) , true )   
-      }  
+        Hud_SetVisible( Hud_GetChild( file.titan.displays[i] ,"ButtonFrame" ) , true )
+      }
 
       Hud_SetVisible( file.titan.displays[i] , true )
-      
+
     } else {
       Hud_SetVisible( file.titan.displays[i] , false )
     }
   }
 }
 
-void function reloadBoostScreen() 
+void function reloadBoostScreen()
 {
   foreach(var button in GetElementsByClassname( file.menu, "BoostLoadoutPanelButtonClass" ))
   {
@@ -583,7 +584,7 @@ void function reloadBoostScreen()
   }
 }
 
-void function reloadPilotScreen() 
+void function reloadPilotScreen()
 {
   foreach(var button in GetElementsByClassname( file.menu, "PilotLoadoutPanelButtonClass" ))
   {
@@ -595,7 +596,7 @@ void function reloadPilotScreen()
 /// Data import/export
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void function setAllAttributes(bool enabled) 
+void function setAllAttributes(bool enabled)
 {
   //Pilot
   foreach(BoolAttributte attribute in file.pilot.attributes)
@@ -603,9 +604,9 @@ void function setAllAttributes(bool enabled)
     attribute.disabled = !enabled
   }
   //Weapon
-  for(int i = 0; i < file.weapon.categories.len();i++) 
+  for(int i = 0; i < file.weapon.categories.len();i++)
   {
-    for(int j = 0; j < file.weapon.categories[i].loadouts.len(); j++) 
+    for(int j = 0; j < file.weapon.categories[i].loadouts.len(); j++)
     {
       Loadout weapon = file.weapon.categories[i].loadouts[j]
       weapon.disabled = !enabled
@@ -617,9 +618,9 @@ void function setAllAttributes(bool enabled)
     }
   }
   //Titan
-  for(int i = 0; i < file.titan.categories.len(); i++) 
+  for(int i = 0; i < file.titan.categories.len(); i++)
   {
-    for(int j = 0; j < file.titan.categories[i].loadouts.len(); j++) 
+    for(int j = 0; j < file.titan.categories[i].loadouts.len(); j++)
     {
       Loadout titan = file.titan.categories[i].loadouts[j]
       titan.disabled = !enabled
@@ -643,7 +644,7 @@ void function setAllAttributes(bool enabled)
   reloadActiveUI()
 }
 
-void function exportConfigToString(var pressedButton) 
+void function exportConfigToString(var pressedButton)
 {
   string exportString = ""
   //Pilot
@@ -652,9 +653,9 @@ void function exportConfigToString(var pressedButton)
     exportString += attribute.disabled ? "1" : "0"
   }
   //Weapon
-  for(int i = 0; i < file.weapon.categories.len();i++) 
+  for(int i = 0; i < file.weapon.categories.len();i++)
   {
-    for(int j = 0; j < file.weapon.categories[i].loadouts.len(); j++) 
+    for(int j = 0; j < file.weapon.categories[i].loadouts.len(); j++)
     {
       Loadout weapon = file.weapon.categories[i].loadouts[j]
       exportString += weapon.disabled ? "1" : "0"
@@ -669,9 +670,9 @@ void function exportConfigToString(var pressedButton)
     }
   }
   //Titan
-  for(int i = 0; i < file.titan.categories.len(); i++) 
+  for(int i = 0; i < file.titan.categories.len(); i++)
   {
-    for(int j = 0; j < file.titan.categories[i].loadouts.len(); j++) 
+    for(int j = 0; j < file.titan.categories[i].loadouts.len(); j++)
     {
       Loadout titan = file.titan.categories[i].loadouts[j]
       exportString += titan.disabled ? "1" : "0"
@@ -690,8 +691,9 @@ void function exportConfigToString(var pressedButton)
   Hud_SetText( Hud_GetChild( file.menu, "ImportExportArea" ), exportString )
 }
 
-int function importPilotUIConfig( array<int> config, int count = 0 ) 
+int function importPilotUIConfig( array<int> config, int count = 0 )
 {
+
   foreach(BoolAttributte attribute in file.pilot.attributes)
   {
     attribute.disabled = (config[count++] == 1) ? true : false
@@ -699,50 +701,50 @@ int function importPilotUIConfig( array<int> config, int count = 0 )
   return count
 }
 
-int function importWeaponUIConfig( array<int> config, int count = 0 ) 
+int function importWeaponUIConfig( array<int> config, int count = 0 )
 {
-  for(int i = 0; i < file.weapon.categories.len();i++) 
+  for(int i = 0; i < file.weapon.categories.len();i++)
   {
     count = importWeaponCategoryUIConfig(i, config, count)
   }
   return count
 }
 
-int function importWeaponCategoryUIConfig(int category ,array<int> config, int count = 0 ) 
+int function importWeaponCategoryUIConfig(int category ,array<int> config, int count = 0 )
 {
-  for(int i = 0; i < file.weapon.categories[category].loadouts.len(); i++) 
+  for(int i = 0; i < file.weapon.categories[category].loadouts.len(); i++)
   {
     Loadout weapon = file.weapon.categories[category].loadouts[i]
 
     weapon.disabled = (config[count++] == 1) ? true : false
-    
+
     int indexOfAtr
 
     indexOfAtr = arrayContains( weapon.atr0.values, config[count++] + "" )
-    weapon.selectedAtr0 = ( indexOfAtr != -1 ) ? indexOfAtr : 0 
+    weapon.selectedAtr0 = ( indexOfAtr != -1 ) ? indexOfAtr : 0
 
     indexOfAtr = arrayContains( weapon.atr1.values, config[count++] + "" )
-    weapon.selectedAtr1 = ( indexOfAtr != -1 ) ? indexOfAtr : 0 
+    weapon.selectedAtr1 = ( indexOfAtr != -1 ) ? indexOfAtr : 0
 
     indexOfAtr = arrayContains( weapon.atr2.values, config[count++] + "" )
-    weapon.selectedAtr2 =  ( indexOfAtr != -1 ) ? indexOfAtr : 0 
+    weapon.selectedAtr2 =  ( indexOfAtr != -1 ) ? indexOfAtr : 0
 
   }
   return count
 }
 
-int function importTitanUIConfig( array<int> config, int count = 0 ) 
+int function importTitanUIConfig( array<int> config, int count = 0 )
 {
-  for(int i = 0; i < file.titan.categories.len(); i++) 
+  for(int i = 0; i < file.titan.categories.len(); i++)
   {
     count = importTitanCategoryUIConfig(i, config, count)
   }
   return count
 }
 
-int function importTitanCategoryUIConfig(int category ,array<int> config, int count = 0 ) 
+int function importTitanCategoryUIConfig(int category ,array<int> config, int count = 0 )
 {
-  for(int i = 0; i < file.titan.categories[category].loadouts.len(); i++) 
+  for(int i = 0; i < file.titan.categories[category].loadouts.len(); i++)
   {
     Loadout titan = file.titan.categories[category].loadouts[i]
     titan.disabled = (config[count++] == 1) ? true : false
@@ -750,29 +752,29 @@ int function importTitanCategoryUIConfig(int category ,array<int> config, int co
     int indexOfAtr
 
     indexOfAtr = arrayContains( titan.atr0.values, config[count++] + "" )
-    titan.selectedAtr0 = ( indexOfAtr != -1 ) ? indexOfAtr : 0 
+    titan.selectedAtr0 = ( indexOfAtr != -1 ) ? indexOfAtr : 0
 
     indexOfAtr = arrayContains( titan.atr1.values, config[count++] + "" )
-    titan.selectedAtr1 = ( indexOfAtr != -1 ) ? indexOfAtr : 0 
-    
+    titan.selectedAtr1 = ( indexOfAtr != -1 ) ? indexOfAtr : 0
+
     indexOfAtr = arrayContains( titan.atr2.values, config[count++] + "" )
-    titan.selectedAtr2 =  ( indexOfAtr != -1 ) ? indexOfAtr : 0 
+    titan.selectedAtr2 =  ( indexOfAtr != -1 ) ? indexOfAtr : 0
     }
     return count
 }
 
-int function importBoostUIConfig( array<int> config, int count = 0 ) 
+int function importBoostUIConfig( array<int> config, int count = 0 )
 {
   foreach(BoolAttributte attribute in file.boost.boosts)
   {
     attribute.disabled = (config[count++] == 1) ? true : false
   }
-  return count 
+  return count
 }
 
-void function importConfigToString(var pressedButton) 
+void function importConfigToString(var pressedButton)
 {
-  string importString = Hud_GetUTF8Text( Hud_GetChild( file.menu, "ImportExportArea" ) ) 
+  string importString = Hud_GetUTF8Text( Hud_GetChild( file.menu, "ImportExportArea" ) )
   if(importString.len() != 177) {
     return
   }
@@ -783,7 +785,7 @@ void function importConfigToString(var pressedButton)
   sendBoostConfig()
 }
 
-void function importUIConfig(string input) 
+void function importUIConfig(string input)
 {
   if(input.len() != 177) {
     return
@@ -801,13 +803,26 @@ void function importUIConfig(string input)
   count = importTitanUIConfig(importArray, count)
   count = importBoostUIConfig(importArray, count)
 
-  reloadActiveUI() 
+  reloadActiveUI()
+}
+
+void function ImportBanConfig(string importString)
+{
+  if(importString.len() != 177) {
+    print("BanSystem Config has invalid length")
+    return
+  }
+  importUIConfig(importString)
+  sendPilotConfig()
+  sendWeaponConfig()
+  sendTitanConfig()
+  sendBoostConfig()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///Data Init
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void function initPilot() 
+void function initPilot()
 {
   PilotDisplay pilot = file.pilot
   pilot.loadoutDisplay = file.loadoutDisplays[0]
@@ -848,14 +863,14 @@ void function initPilot()
 	RuiSetString( rui, "descText", Localize("#MODE_SETTING_BAN_PILOT_LBL_TEXT") )
 }
 
-BoolAttributte function createBoolAttributte( asset image) 
+BoolAttributte function createBoolAttributte( asset image)
 {
     BoolAttributte attribute
     attribute.image = image
     return attribute
 }
 
-void function initWeapon() 
+void function initWeapon()
 {
   LoadoutDisplay weapon = file.weapon
   weapon.loadoutDisplay = file.loadoutDisplays[1]
@@ -920,8 +935,8 @@ void function initWeapon()
         "7",
         "3",
         "2",
-        "6"]   
-    }  
+        "6"]
+    }
   ar.loadouts.append(createWeapon(
     "r101",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_r101_aog",
@@ -972,7 +987,7 @@ void function initWeapon()
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_car",
     defaultMod,
     defaultMod,
-    smgVisor))  
+    smgVisor))
 
   smg.loadouts.append(createWeapon(
     "alternator",
@@ -986,14 +1001,14 @@ void function initWeapon()
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_volt",
     defaultMod,
     defaultMod,
-    smgVisor))     
+    smgVisor))
 
   smg.loadouts.append(createWeapon(
     "r97",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_r97n",
     defaultMod,
     defaultMod,
-    smgVisor))       
+    smgVisor))
 
   weapon.categories.append(smg)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1019,21 +1034,21 @@ void function initWeapon()
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_spitfire",
     defaultMod,
     defaultMod,
-    lmgVisor))   
+    lmgVisor))
 
   lmg.loadouts.append(createWeapon(
     "lstar",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_lstar",
     defaultMod,
     defaultMod,
-    lmgVisor))  
+    lmgVisor))
 
   lmg.loadouts.append(createWeapon(
     "devotion",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_esaw",
     defaultMod,
     defaultMod,
-    lmgVisor))      
+    lmgVisor))
 
   weapon.categories.append(lmg)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1062,7 +1077,7 @@ void function initWeapon()
     "0",
     "7",
     "5",
-    "6",]  
+    "6",]
 
   ArrayAttribute sniperModOne
   sniperModOne.images = [
@@ -1100,14 +1115,14 @@ void function initWeapon()
     "3",
     "6",
     "5",
-    "7"]    
+    "7"]
 
   sniper.loadouts.append(createWeapon(
     "kraber",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_kraber",
     sniperModOne,
     sniperModOne,
-    sniperViser))   
+    sniperViser))
 
   sniper.loadouts.append(createWeapon(
     "doubletake",
@@ -1121,8 +1136,8 @@ void function initWeapon()
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_longbow",
     sniperModTwo,
     sniperModTwo,
-    sniperViser)) 
-  
+    sniperViser))
+
   weapon.categories.append(sniper)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Category shotgun
@@ -1133,15 +1148,15 @@ void function initWeapon()
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_eva8",
     defaultMod,
     defaultMod,
-    smgVisor)) 
+    smgVisor))
 
   shotgun.loadouts.append(createWeapon(
     "mastiff",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_mastiff",
     defaultMod,
     defaultMod,
-    smgVisor)) 
-  
+    smgVisor))
+
   weapon.categories.append(shotgun)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Category grenadier
@@ -1151,25 +1166,25 @@ void function initWeapon()
     "smr",
     $"r2_ui/menus/loadout_icons/anti_titan/at_sidewinder",
     defaultMod,
-    defaultMod)) 
+    defaultMod))
 
   grenadier.loadouts.append(createWeaponNoVisor(
     "epg",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_epg1",
     defaultMod,
-    defaultMod)) 
+    defaultMod))
 
   grenadier.loadouts.append(createWeaponNoVisor(
     "softball",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_softball",
     defaultMod,
-    defaultMod)) 
+    defaultMod))
 
   grenadier.loadouts.append(createWeaponNoVisor(
     "coldwar",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_coldwar",
     defaultMod,
-    defaultMod)) 
+    defaultMod))
 
   weapon.categories.append(grenadier)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1220,31 +1235,31 @@ void function initWeapon()
     "wingman_elite",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_wingman_elite",
     wingmanMod,
-    wingmanMod)) 
+    wingmanMod))
 
   handgun.loadouts.append(createWeaponNoVisor(
     "mozambique",
     $"r2_ui/menus/loadout_icons/secondary_weapon/secondary_mozambique",
     handgunMod,
-    handgunMod)) 
+    handgunMod))
 
   handgun.loadouts.append(createWeaponNoVisor(
     "re45",
     $"r2_ui/menus/loadout_icons/secondary_weapon/secondary_autopistol",
     handgunMod,
-    handgunMod)) 
+    handgunMod))
 
   handgun.loadouts.append(createWeaponNoVisor(
     "p2016",
     $"r2_ui/menus/loadout_icons/secondary_weapon/secondary_hammondp2011",
     handgunMod,
-    handgunMod)) 
+    handgunMod))
 
   handgun.loadouts.append(createWeaponNoVisor(
     "b3",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_wingman_m",
     handgunMod,
-    handgunMod))  
+    handgunMod))
 
   weapon.categories.append(handgun)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1287,30 +1302,30 @@ void function initWeapon()
     "chargerifle",
     $"r2_ui/menus/loadout_icons/anti_titan/at_defenderc",
     chargerifleMod,
-    chargerifleMod)) 
+    chargerifleMod))
 
   antiTitan.loadouts.append(createWeaponNoVisor(
     "mgl",
     $"r2_ui/menus/loadout_icons/anti_titan/at_mgl",
     antiTitanMod,
-    antiTitanMod))  
+    antiTitanMod))
 
   antiTitan.loadouts.append(createWeaponNoVisor(
     "thunderbolt",
     $"r2_ui/menus/loadout_icons/anti_titan/at_arcball",
     antiTitanMod,
-    antiTitanMod)) 
+    antiTitanMod))
 
   antiTitan.loadouts.append(createWeaponNoVisor(
     "archer",
     $"r2_ui/menus/loadout_icons/anti_titan/at_archer",
     antiTitanMod,
-    antiTitanMod))   
+    antiTitanMod))
 
-  weapon.categories.append(antiTitan)      
+  weapon.categories.append(antiTitan)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  for(int i = 0; i < weapon.buttons.len() ; i++) 
+  for(int i = 0; i < weapon.buttons.len() ; i++)
   {
     RHud_SetText( weapon.buttons[i], Localize(weapon.categories[i].displayName) )
     AddButtonEventHandler( weapon.buttons[i], UIE_CLICK, changeWeaponDisplay )
@@ -1320,13 +1335,13 @@ void function initWeapon()
 
   for(int i = 0; i < weaponButton.len(); i++) {
     AddButtonEventHandler( weaponButton[i], UIE_CLICK, callLoadoutButtonClick )
-  }  
-  
+  }
+
   array<var> modTypeButtons = GetElementsByClassname( file.menu, "HideWhenEditing_0" )
 
   for(int i = 0; i < modTypeButtons.len(); i++) {
     AddButtonEventHandler( modTypeButtons[i], UIE_CLICK, clickOpenSubMenu )
-  }    
+  }
 
 
 
@@ -1339,7 +1354,7 @@ void function initWeapon()
 	RuiSetString( rui, "descText", Localize("#MODE_SETTING_BAN_WEAPON_LBL_TEXT") )
 }
 
-Loadout function createWeapon(string name, asset image, ArrayAttribute atr0, ArrayAttribute atr1, ArrayAttribute atr2) 
+Loadout function createWeapon(string name, asset image, ArrayAttribute atr0, ArrayAttribute atr1, ArrayAttribute atr2)
 {
   Loadout weapon
   weapon.image = image
@@ -1355,9 +1370,9 @@ Loadout function createWeapon(string name, asset image, ArrayAttribute atr0, Arr
   return weapon
 }
 
-Loadout function createWeaponNoVisor(string name, asset image, ArrayAttribute atr0, ArrayAttribute atr1) 
+Loadout function createWeaponNoVisor(string name, asset image, ArrayAttribute atr0, ArrayAttribute atr1)
 {
-  ArrayAttribute visor 
+  ArrayAttribute visor
 
   Loadout weapon
   weapon.image = image
@@ -1373,7 +1388,7 @@ Loadout function createWeaponNoVisor(string name, asset image, ArrayAttribute at
   return weapon
 }
 
-void function initTitan() 
+void function initTitan()
 {
   LoadoutDisplay titan = file.titan
 
@@ -1382,7 +1397,7 @@ void function initTitan()
   var lableOne = Hud_GetChild( file.titan.loadoutDisplay, "TitanName" )
   SetLabelRuiText( lableOne, Localize("#MODE_SETTING_BAN_TITAN") )
 
-  titan.buttons = GetElementsByClassname( file.menu, "BanTitanCategoryButton" )  
+  titan.buttons = GetElementsByClassname( file.menu, "BanTitanCategoryButton" )
 
   titan.displays = GetElementsByClassname( file.menu, "titanDisplay")
 
@@ -1416,7 +1431,7 @@ void function initTitan()
     "6"
   ]
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Category stryder
   stryder.displayName = "Stryder"
 
@@ -1479,7 +1494,7 @@ void function initTitan()
 
   stryder.loadouts.append(ronin)
   titan.categories.append(stryder)
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   Category atlas
   atlas.displayName = "Atlas"
@@ -1625,7 +1640,7 @@ void function initTitan()
   atlas.loadouts.append(monarchCores)
 
   titan.categories.append(atlas)
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Category ogre
   ogre.displayName = "Ogre"
 
@@ -1658,7 +1673,7 @@ void function initTitan()
   scorch.atr2 = fallKit
 
   ogre.loadouts.append(scorch)
-  
+
 
   Loadout legion
   legion.name = "legion"
@@ -1691,9 +1706,9 @@ void function initTitan()
   ogre.loadouts.append(legion)
 
   titan.categories.append(ogre)
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  for(int i = 0; i < titan.buttons.len() ; i++) 
+  for(int i = 0; i < titan.buttons.len() ; i++)
   {
     RHud_SetText( titan.buttons[i], Localize(titan.categories[i].displayName) )
     AddButtonEventHandler( titan.buttons[i], UIE_CLICK, changeTitanDisplay )
@@ -1708,7 +1723,7 @@ void function initTitan()
 	RuiSetString( rui, "descText", Localize("#MODE_SETTING_BAN_TITAN_LBL_TEXT") )
 }
 
-void function initBoost() 
+void function initBoost()
 {
   BoostDisplay boost = file.boost
 
@@ -1747,21 +1762,20 @@ void function initBoost()
 ///Networking
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void function UpdateBanData() 
+void function UpdateBanData()
 {
 	string data = ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_0", "") + ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_1", "") + ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_2", "") + ""
-
   importUIConfig(data)
 }
 
-void function sendPilotConfig() 
+void function sendPilotConfig()
 {
   string dataToSend = ""
-  
-  for(int i = 0; i < file.pilot.attributes.len(); i++) 
+
+  for(int i = 0; i < file.pilot.attributes.len(); i++)
   {
     BoolAttributte structData = file.pilot.attributes[i]
     dataToSend += " ability|" + i + "|" + (structData.disabled ? "1" : "0")
@@ -1770,12 +1784,12 @@ void function sendPilotConfig()
   ClientCommand("BanUiUpdateData " + dataToSend)
 }
 
-void function sendWeaponConfig() 
+void function sendWeaponConfig()
 {
   string dataToSend = ""
-  for(int i = 0; i < file.weapon.categories.len();i++) 
+  for(int i = 0; i < file.weapon.categories.len();i++)
   {
-      for(int j = 0; j < file.weapon.categories[i].loadouts.len(); j++) 
+      for(int j = 0; j < file.weapon.categories[i].loadouts.len(); j++)
       {
       Loadout weapon = file.weapon.categories[i].loadouts[j]
 
@@ -1790,12 +1804,12 @@ void function sendWeaponConfig()
   ClientCommand("BanUiUpdateData " + dataToSend)
 }
 
-void function sendTitanConfig() 
+void function sendTitanConfig()
 {
   string dataToSend = ""
-  for(int i = 0; i < file.titan.categories.len(); i++) 
+  for(int i = 0; i < file.titan.categories.len(); i++)
   {
-    for(int j = 0; j < file.titan.categories[i].loadouts.len(); j++) 
+    for(int j = 0; j < file.titan.categories[i].loadouts.len(); j++)
     {
       Loadout titan = file.titan.categories[i].loadouts[j]
 
@@ -1810,11 +1824,11 @@ void function sendTitanConfig()
   ClientCommand("BanUiUpdateData " + dataToSend)
 }
 
-void function sendBoostConfig() 
+void function sendBoostConfig()
 {
   string dataToSend = ""
-  
-  for(int i = 0; i < file.boost.boosts.len(); i++) 
+
+  for(int i = 0; i < file.boost.boosts.len(); i++)
   {
     BoolAttributte structData = file.boost.boosts[i]
     dataToSend += " boost|" + i + "|" + (structData.disabled ? "1" : "0")
@@ -1823,32 +1837,32 @@ void function sendBoostConfig()
   ClientCommand("BanUiUpdateData " + dataToSend)
 }
 
-void function SendChangesToServer(string typeToUpdate, int index, string data) 
+void function SendChangesToServer(string typeToUpdate, int index, string data)
 {
   string dataToSend = typeToUpdate + "|" + index + "|" + data
 
   ClientCommand("BanUiUpdateData " + dataToSend)
 }
 
-void function SendLoadoutChangesToServer(string typeToUpdate, int category ,int index, string data) 
+void function SendLoadoutChangesToServer(string typeToUpdate, int category ,int index, string data)
 {
   string dataToSend = typeToUpdate + "|" + category + "|" + index + "|" + data
 
   ClientCommand("BanUiUpdateData " + dataToSend)
 }
 
-string function ParseLoadoutToDataString(Loadout loadout, int category) 
+string function ParseLoadoutToDataString(Loadout loadout, int category)
 {
   string dataToSend = ""
-  dataToSend += (loadout.disabled ? "1" : "0") 
+  dataToSend += (loadout.disabled ? "1" : "0")
   dataToSend += loadout.atr0.values[loadout.selectedAtr0]
-  dataToSend += loadout.atr1.values[loadout.selectedAtr1] 
+  dataToSend += loadout.atr1.values[loadout.selectedAtr1]
 
-  //Since Titans only have 3 categories I just ban the weapon categories 
+  //Since Titans only have 3 categories I just ban the weapon categories
   if(category < 5) {
      dataToSend += loadout.atr2.values[loadout.selectedAtr2]
-  } 
-  else 
+  }
+  else
   {
     dataToSend += "0"
   }
@@ -1859,9 +1873,9 @@ string function ParseLoadoutToDataString(Loadout loadout, int category)
 ///Utility
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int function arrayContains(array<string> a, string toCheck) 
+int function arrayContains(array<string> a, string toCheck)
 {
-  for(int i = 0; i < a.len(); i++) 
+  for(int i = 0; i < a.len(); i++)
   {
     if (toCheck == a[i]) {
       return i
@@ -1870,7 +1884,7 @@ int function arrayContains(array<string> a, string toCheck)
   return -1
 }
 
-array<int> function parseImportData(string importData) 
+array<int> function parseImportData(string importData)
 {
   array<int> importArray
   for(int i = 0; i < importData.len(); i++) {

@@ -20,7 +20,7 @@ global struct WeaponBanStruct {
 	string    mod2,
 	array <string>   visor,
 	string uniqueMod,
-} 
+}
 
 global struct BoostBanStruct
 {
@@ -32,7 +32,7 @@ global struct BoostBanStruct
 
 global struct TitanBanStruct
 {
-	string name, 
+	string name,
 	bool disabled,
 
 	//thanks monarch for making me  handle 3 seperet core passives
@@ -48,20 +48,41 @@ global struct UniversalBanStruct
 }
 
 struct {
- array<WeaponBanStruct> weaponArray 
+ array<WeaponBanStruct> weaponArray
  array<UniversalBanStruct> grenadeArray
  array<UniversalBanStruct> abilityArray
  array<BoostBanStruct> boostArray
  array<TitanBanStruct> titanArray
+ array<string> admins
 } file
 
 void function BanEquipment_Init()
 {
+	Setup_AdminList()
 	InitData()
 	ImportData()
 
 	AddClientCommandCallback( "BanUiUpdateData", ClientCommandCallback_BanUiUpdateData )
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///SETUP ADMIN
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void function Setup_AdminList()
+{
+	string cvar = GetConVarString( "grant_admin" )
+	file.admins = split( cvar, "," )
+}
+
+bool function IsPlayerAdmin(entity player) {
+	foreach (string admin in file.admins) {
+		if (admin == player.GetUID()) {
+			return true
+		}
+	}
+	return false
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///IMPORT DATA
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,20 +93,30 @@ void function ImportData()
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_1", "") + ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_2", "") + ""
 
-
 	array< string > importArray = parseImportData( data )
-
-	if(importArray.len() != 177) {
-    	return
+	if(importArray.len() != 177)
+	{
+		string cVar = GetConVarString( "ban_config" )
+    	importArray = parseImportData( cVar )
+		if(importArray.len() == 177)
+		{
+			SetPlaylistVarOverride("BAN_DATA_0", cVar.slice(0,60))
+			SetPlaylistVarOverride("BAN_DATA_1", cVar.slice(60,120))
+			SetPlaylistVarOverride("BAN_DATA_2", cVar.slice(120))
+		}
+		else
+		{
+			return
+		}
   	}
 
 	int currentIndex = 0
-	for( int i = 0; i < file.abilityArray.len() + file.grenadeArray.len(); i++ ) 
+	for( int i = 0; i < file.abilityArray.len() + file.grenadeArray.len(); i++ )
 	{
 		UpdateAbility( i, importArray[currentIndex++] )
 	}
 
-	for( int i = 0; i < file.weaponArray.len(); i++ ) 
+	for( int i = 0; i < file.weaponArray.len(); i++ )
 	{
 		string updateData = ""
 		updateData += importArray[currentIndex++]
@@ -96,7 +127,7 @@ void function ImportData()
 		UpdateWeapon( i, updateData )
 	}
 
-	for( int i = 0; i < file.titanArray.len(); i++ ) 
+	for( int i = 0; i < file.titanArray.len(); i++ )
 	{
 		string updateData = ""
 		updateData += importArray[currentIndex++]
@@ -107,25 +138,25 @@ void function ImportData()
 		UpdateTitan( i, updateData )
 	}
 
-	for( int i = 0; i < file.boostArray.len(); i++ ) 
+	for( int i = 0; i < file.boostArray.len(); i++ )
 	{
 		UpdateBoost( i, importArray[currentIndex++] )
 	}
 
 	string dataToStore = ""
-	foreach (UniversalBanStruct banStruct in file.abilityArray ) 
+	foreach (UniversalBanStruct banStruct in file.abilityArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
-	foreach (UniversalBanStruct banStruct in file.grenadeArray ) 
+	foreach (UniversalBanStruct banStruct in file.grenadeArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
-	for(int i = 0; i < file.weaponArray.len(); i++) 
+	for(int i = 0; i < file.weaponArray.len(); i++)
 	{
 		dataToStore += GetWeaponStringaData(i)
 	}
-	for(int i = 0; i < file.titanArray.len(); i++) 
+	for(int i = 0; i < file.titanArray.len(); i++)
 	{
 		dataToStore += GetTitanStringaData(i)
 	}
@@ -137,22 +168,30 @@ void function ImportData()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///ClientCommandCallback_BanUiUpdateData
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string> args ) 
+bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string> args )
 {
 	//TODO TEST IF PLAYER IS ALLOWED TO EDIT DATA
-	if ( GetConVarInt( "ns_private_match_only_host_can_change_settings" ) >= 1 )
-		if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+	if (file.admins.len() == 0) {
+		if ( GetConVarInt( "ns_private_match_only_host_can_change_settings" ) >= 1 )
+		{
+			if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+			{
+				return true
+			}
+		}
+	} else {
+		if (!IsPlayerAdmin(player)) {
 			return true
-		
+		}
+	}
 
-
-	if(args.len() == 0) 
+	if(args.len() == 0)
 	{
 		return true
 	}
-	
 
-	foreach(string changeData in args) 
+
+	foreach(string changeData in args)
 	{
 		array<string> data = split(changeData ,"|")
 
@@ -162,7 +201,7 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 
 		string typeToUpdate = data[0]
 
-		switch(typeToUpdate) 
+		switch(typeToUpdate)
 		{
 			case "ability":
 				UpdateAbility(int(data[1]), data[2])
@@ -172,7 +211,7 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 				break
 			case "titan":
 				UpdateTitanFromCategory(int(data[1]), int(data[2]), data[3])
-				break	
+				break
 			case "boost":
 				UpdateBoost(int(data[1]), data[2])
 				break
@@ -181,19 +220,19 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 	}
 
 	string dataToStore = ""
-	foreach (UniversalBanStruct banStruct in file.abilityArray ) 
+	foreach (UniversalBanStruct banStruct in file.abilityArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
-	foreach (UniversalBanStruct banStruct in file.grenadeArray ) 
+	foreach (UniversalBanStruct banStruct in file.grenadeArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
-	for(int i = 0; i < file.weaponArray.len(); i++) 
+	for(int i = 0; i < file.weaponArray.len(); i++)
 	{
 		dataToStore += GetWeaponStringaData(i)
 	}
-	for(int i = 0; i < file.titanArray.len(); i++) 
+	for(int i = 0; i < file.titanArray.len(); i++)
 	{
 		dataToStore += GetTitanStringaData(i)
 	}
@@ -211,23 +250,23 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 	return true
 }
 
-void function UpdateAbility(int index, string data) 
+void function UpdateAbility(int index, string data)
 {
 	UniversalBanStruct structToChange
 
-	if(index < file.abilityArray.len()) 
+	if(index < file.abilityArray.len())
 	{
 		structToChange = file.abilityArray[index]
-	} 
-	else 
+	}
+	else
 	{
 		structToChange = file.grenadeArray[index - file.abilityArray.len()]
 	}
-	
+
 	structToChange.disabled =  (data == "1") ? true : false
 }
 
-void function UpdateWeaponFromCategory(int category, int index, string data) 
+void function UpdateWeaponFromCategory(int category, int index, string data)
 {
 	switch(category) {
 		case 0:
@@ -257,7 +296,7 @@ void function UpdateWeaponFromCategory(int category, int index, string data)
 	}
 }
 
-void function UpdateTitanFromCategory(int category, int index, string data) 
+void function UpdateTitanFromCategory(int category, int index, string data)
 {
 	switch(category) {
 		case 0:
@@ -272,12 +311,12 @@ void function UpdateTitanFromCategory(int category, int index, string data)
 	}
 }
 
-void function UpdateBoost(int index, string data) 
+void function UpdateBoost(int index, string data)
 {
 	file.boostArray[index].disabled = (data == "1") ? true : false
 }
 
-void function UpdateWeapon(int index, string data) 
+void function UpdateWeapon(int index, string data)
 {
 	WeaponBanStruct structToChange = file.weaponArray[index]
 	array< string > dataAtr = parseImportData(data)
@@ -288,29 +327,29 @@ void function UpdateWeapon(int index, string data)
 	structToChange.visor = [GetWeaponVisorStringFromId(dataAtr[3])]
 }
 
-void function UpdateTitan(int index, string data) 
+void function UpdateTitan(int index, string data)
 {
 	TitanBanStruct structToChange = file.titanArray[index]
 	array< string > dataAtr = parseImportData(data)
 
-	if( index != 5) 
+	if( index != 5)
 	{
 		structToChange.disabled =  dataAtr[0] == "1" ? true : false
-		structToChange.passive1 = GetTitanKitStringFromId(dataAtr[1], structToChange.name ) 
+		structToChange.passive1 = GetTitanKitStringFromId(dataAtr[1], structToChange.name )
 		structToChange.passive2 = GetTitanPassiveStringFromId(dataAtr[2])
 		structToChange.passive3 = GetTitanPassiveStringFromId(dataAtr[3])
-	} 
+	}
 	else {
 		structToChange.passive1 = GetMonarchCoreStringFromId(dataAtr[1], 0)
 		structToChange.passive2 = GetMonarchCoreStringFromId(dataAtr[2], 1)
 		structToChange.passive3 = GetMonarchCoreStringFromId(dataAtr[3], 2)
 	}
-	
+
 }
 
-string function GetWeaponModStringById(string id, WeaponBanStruct weaponStruct) 
+string function GetWeaponModStringById(string id, WeaponBanStruct weaponStruct)
 {
-	switch(id) 
+	switch(id)
 	{
 		case "0":
 			return "UNDEFINED"
@@ -327,19 +366,19 @@ string function GetWeaponModStringById(string id, WeaponBanStruct weaponStruct)
 		case "6":
 			return "pas_fast_swap"
 		case "7":
-			return ""					
+			return ""
 	}
 	return weaponStruct.uniqueMod
 }
 
-string function GetWeaponVisorStringFromId(string str) 
+string function GetWeaponVisorStringFromId(string str)
 {
-	switch(str) 
+	switch(str)
 	{
 		case "0":
 			return "UNDEFINED"
 		case "1":
-			return "holosight"	
+			return "holosight"
 		case "2":
 			return "hcog"
 		case "3":
@@ -351,175 +390,175 @@ string function GetWeaponVisorStringFromId(string str)
 		case "6":
 			return "threat_scope"
 		case "7":
-			return ""					
+			return ""
 	}
 	return "UNDEFINED"
 }
 
-string function GetTitanPassiveStringFromId(string str) 
+string function GetTitanPassiveStringFromId(string str)
 {
-	switch(str) 
+	switch(str)
 	{
 		case "0":
 			return "UNDEFINED"
 		case "1":
-			return "pas_enhanced_titan_ai"	
+			return "pas_enhanced_titan_ai"
 		case "2":
 			return "pas_auto_eject"
 		case "3":
 			return "pas_mobility_dash_capacity"
-		case "4": 
+		case "4":
 			return "pas_hyper_core"
 		case "5":
 			return "pas_build_up_nuclear_core"
 		case "6":
-			return "pas_anti_rodeo"	
+			return "pas_anti_rodeo"
 		case "7":
 			return "pas_bubbleshield"
 		case "8":
-			return "pas_warpfall"						
+			return "pas_warpfall"
 	}
 	return "UNDEFINED"
 }
 
-string function GetTitanKitStringFromId(string str, string titanKit) 
+string function GetTitanKitStringFromId(string str, string titanKit)
 {
-	if(str == "0") 
+	if(str == "0")
 	{
 		return "UNDEFINED"
 	}
 
-	if(titanKit == "ion") 
+	if(titanKit == "ion")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_ion_weapon"	
+				return "pas_ion_weapon"
 			case "pas_ion_tripwire":
 				return "2"
 			case "3":
 				return "pas_ion_vortex"
-			case "4": 
-				return "pas_ion_lasercannon"	
-			case "5": 
-				return "pas_ion_weapon_ads"									
+			case "4":
+				return "pas_ion_lasercannon"
+			case "5":
+				return "pas_ion_weapon_ads"
 		}
 	}
 
-	if(titanKit == "scorch") 
+	if(titanKit == "scorch")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_scorch_weapon"	
+				return "pas_scorch_weapon"
 			case "2":
 				return "pas_scorch_selfdmg"
 			case "3":
 				return "pas_scorch_shield"
-			case "4": 
-				return "pas_scorch_firewall"	
-			case "5": 
-				return "pas_scorch_flamecore"						
+			case "4":
+				return "pas_scorch_firewall"
+			case "5":
+				return "pas_scorch_flamecore"
 		}
 	}
 
-	if(titanKit == "northstar") 
+	if(titanKit == "northstar")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_northstar_weapon"	
+				return "pas_northstar_weapon"
 			case "2":
 				return "pas_northstar_cluster"
 			case "3":
 				return "pas_northstar_trap"
-			case "4": 
+			case "4":
 				return "pas_northstar_flightcore"
-			case "5": 
-				return "pas_northstar_optics"						
+			case "5":
+				return "pas_northstar_optics"
 		}
 	}
 
-	if(titanKit == "ronin") 
+	if(titanKit == "ronin")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_ronin_weapon"	
+				return "pas_ronin_weapon"
 			case "2":
 				return "pas_ronin_arcwave"
 			case "3":
 				return "pas_ronin_phase"
-			case "4": 
+			case "4":
 				return "pas_ronin_swordcore"
-			case "5": 
-				return "pas_ronin_autoshift"			
+			case "5":
+				return "pas_ronin_autoshift"
 		}
 	}
 
-	if(titanKit == "tone") 
+	if(titanKit == "tone")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_tone_weapon"	
+				return "pas_tone_weapon"
 			case "2":
 				return "pas_tone_wall"
 			case "3":
 				return "pas_tone_sonar"
-			case "4": 
+			case "4":
 				return "pas_tone_rockets"
-			case "5": 
-				return "pas_tone_burst"	
+			case "5":
+				return "pas_tone_burst"
 		}
 	}
 
-	if(titanKit == "legion") 
+	if(titanKit == "legion")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_enhanced_titan_ai"	
+				return "pas_enhanced_titan_ai"
 			case "2":
 				return "pas_legion_smartcore"
 			case "3":
 				return "pas_legion_gunshield"
-			case "4": 
+			case "4":
 				return "pas_legion_spinup"
-			case "5": 
+			case "5":
 				return "pas_legion_chargeshot"
 		}
 	}
 
-	if(titanKit == "vanguard") 
+	if(titanKit == "vanguard")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_vanguard_shield"	
+				return "pas_vanguard_shield"
 			case "2":
 				return "pas_vanguard_coremeter"
 			case "3":
 				return "pas_vanguard_rearm"
-			case "4": 
-				return "pas_vanguard_doom"						
+			case "4":
+				return "pas_vanguard_doom"
 		}
 	}
 	return "UNDEFINED"
 }
 
-string function GetMonarchCoreStringFromId(string str, int coreStage) 
+string function GetMonarchCoreStringFromId(string str, int coreStage)
 {
-	if(str == "0") 
+	if(str == "0")
 	{
 		return "UNDEFINED"
 	}
-	if(coreStage == 0) 
+	if(coreStage == 0)
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_vanguard_core1"	
+				return "pas_vanguard_core1"
 			case "2":
 				return "pas_vanguard_core2"
 			case "3":
@@ -527,24 +566,24 @@ string function GetMonarchCoreStringFromId(string str, int coreStage)
 		}
 	}
 
-	if(coreStage == 1) 
+	if(coreStage == 1)
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_vanguard_core4"	
+				return "pas_vanguard_core4"
 			case "2":
 				return "pas_vanguard_core5"
 			case "3":
 				return "pas_vanguard_core6"
 		}
 	}
-	if(coreStage == 2) 
+	if(coreStage == 2)
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "1":
-				return "pas_vanguard_core7"	
+				return "pas_vanguard_core7"
 			case "2":
 				return "pas_vanguard_core8"
 			case "3":
@@ -557,7 +596,7 @@ string function GetMonarchCoreStringFromId(string str, int coreStage)
 ///Serialize data
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-string function GetWeaponStringaData(int id) 
+string function GetWeaponStringaData(int id)
 {
 	if(id == -1) {
 		return "0000"
@@ -571,9 +610,9 @@ string function GetWeaponStringaData(int id)
 	return data
 }
 
-string function GetWeaponModIdFromString(string str) 
+string function GetWeaponModIdFromString(string str)
 {
-	switch(str) 
+	switch(str)
 	{
 		case "UNDEFINED":
 			return "0"
@@ -590,19 +629,19 @@ string function GetWeaponModIdFromString(string str)
 		case "pas_fast_swap":
 			return "6"
 		case "":
-			return "7"					
+			return "7"
 	}
 	return "8"
 }
 
-string function GetWeaponVisorIdFromString(string str) 
+string function GetWeaponVisorIdFromString(string str)
 {
-	switch(str) 
+	switch(str)
 	{
 		case "UNDEFINED":
 			return "0"
 		case "holosight":
-			return "1"	
+			return "1"
 		case "hcog":
 			return "2"
 		case "redline_sight":
@@ -614,25 +653,25 @@ string function GetWeaponVisorIdFromString(string str)
 		case "threat_scope":
 			return "6"
 		case "":
-			return "7"					
+			return "7"
 	}
 	return "0"
 }
 
-string function GetTitanStringaData(int id) 
+string function GetTitanStringaData(int id)
 {
 	if(id == -1) {
 		return "0000"
 	}
 	TitanBanStruct currentStruct = file.titanArray[id]
 	string data = ""
-	if(id != 5) 
+	if(id != 5)
 	{
 		data += currentStruct.disabled ? "1" : "0"
 		data += GetTitanKitIdFromStr(currentStruct.passive1, currentStruct.name)
 		data += GetTitanPassiveIdFromStr(currentStruct.passive2)
 		data += GetTitanPassiveIdFromStr(currentStruct.passive3)
-	} else 
+	} else
 	{
 		data += "1"
 		data += GetMonarchCoreIdFromString(currentStruct.passive1, 0)
@@ -641,172 +680,172 @@ string function GetTitanStringaData(int id)
 	}
 
 	return data
-} 
+}
 
-string function GetTitanPassiveIdFromStr(string str) 
+string function GetTitanPassiveIdFromStr(string str)
 {
-	switch(str) 
+	switch(str)
 	{
 		case "UNDEFINED":
 			return "0"
 		case "pas_enhanced_titan_ai":
-			return "1"	
+			return "1"
 		case "pas_auto_eject":
 			return "2"
 		case "pas_mobility_dash_capacity":
 			return "3"
-		case "pas_hyper_core": 
+		case "pas_hyper_core":
 			return "4"
 		case "pas_build_up_nuclear_core":
 			return "5"
 		case "pas_anti_rodeo":
-			return "6"	
+			return "6"
 		case "pas_bubbleshield":
 			return "7"
 		case "pas_warpfall":
-			return "8"						
+			return "8"
 	}
 	return "0"
 }
 
-string function GetTitanKitIdFromStr(string str, string titanKit) 
+string function GetTitanKitIdFromStr(string str, string titanKit)
 {
-	if(str == "UNDEFINED") 
+	if(str == "UNDEFINED")
 	{
 		return "0"
 	}
 
-	if(titanKit == "ion") 
+	if(titanKit == "ion")
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "pas_ion_weapon":
-				return "1"	
+				return "1"
 			case "pas_ion_tripwire":
 				return "2"
 			case "pas_ion_vortex":
 				return "3"
-			case "pas_ion_lasercannon": 
-				return "4"	
-			case "pas_ion_weapon_ads": 
-				return "5"									
-		}
-	}
-
-	if(titanKit == "scorch") 
-	{
-		switch(str) 
-		{
-			case "pas_scorch_weapon":
-				return "1"	
-			case "pas_scorch_selfdmg":
-				return "2"
-			case "pas_scorch_shield":
-				return "3"
-			case "pas_scorch_firewall": 
-				return "4"	
-			case "pas_scorch_flamecore": 
-				return "5"						
-		}
-	}
-
-	if(titanKit == "northstar") 
-	{
-		switch(str) 
-		{
-			case "pas_northstar_weapon":
-				return "1"	
-			case "pas_northstar_cluster":
-				return "2"
-			case "pas_northstar_trap":
-				return "3"
-			case "pas_northstar_flightcore": 
+			case "pas_ion_lasercannon":
 				return "4"
-			case "pas_northstar_optics": 
-				return "5"						
-		}
-	}
-
-	if(titanKit == "ronin") 
-	{
-		switch(str) 
-		{
-			case "pas_ronin_weapon":
-				return "1"	
-			case "pas_ronin_arcwave":
-				return "2"
-			case "pas_ronin_phase":
-				return "3"
-			case "pas_ronin_swordcore": 
-				return "4"
-			case "pas_ronin_autoshift": 
-				return "5"			
-		}
-	}
-
-	if(titanKit == "tone") 
-	{
-		switch(str) 
-		{
-			case "pas_tone_weapon":
-				return "1"	
-			case "pas_tone_wall":
-				return "2"
-			case "pas_tone_sonar":
-				return "3"
-			case "pas_tone_rockets": 
-				return "4"
-			case "pas_tone_burst": 
-				return "5"	
-		}
-	}
-
-	if(titanKit == "legion") 
-	{
-		switch(str) 
-		{
-			case "pas_enhanced_titan_ai":
-				return "1"	
-			case "pas_legion_smartcore":
-				return "2"
-			case "pas_legion_gunshield":
-				return "3"
-			case "pas_legion_spinup": 
-				return "4"
-			case "pas_legion_chargeshot": 
+			case "pas_ion_weapon_ads":
 				return "5"
 		}
 	}
 
-	if(titanKit == "vanguard") 
+	if(titanKit == "scorch")
 	{
-		switch(str) 
+		switch(str)
+		{
+			case "pas_scorch_weapon":
+				return "1"
+			case "pas_scorch_selfdmg":
+				return "2"
+			case "pas_scorch_shield":
+				return "3"
+			case "pas_scorch_firewall":
+				return "4"
+			case "pas_scorch_flamecore":
+				return "5"
+		}
+	}
+
+	if(titanKit == "northstar")
+	{
+		switch(str)
+		{
+			case "pas_northstar_weapon":
+				return "1"
+			case "pas_northstar_cluster":
+				return "2"
+			case "pas_northstar_trap":
+				return "3"
+			case "pas_northstar_flightcore":
+				return "4"
+			case "pas_northstar_optics":
+				return "5"
+		}
+	}
+
+	if(titanKit == "ronin")
+	{
+		switch(str)
+		{
+			case "pas_ronin_weapon":
+				return "1"
+			case "pas_ronin_arcwave":
+				return "2"
+			case "pas_ronin_phase":
+				return "3"
+			case "pas_ronin_swordcore":
+				return "4"
+			case "pas_ronin_autoshift":
+				return "5"
+		}
+	}
+
+	if(titanKit == "tone")
+	{
+		switch(str)
+		{
+			case "pas_tone_weapon":
+				return "1"
+			case "pas_tone_wall":
+				return "2"
+			case "pas_tone_sonar":
+				return "3"
+			case "pas_tone_rockets":
+				return "4"
+			case "pas_tone_burst":
+				return "5"
+		}
+	}
+
+	if(titanKit == "legion")
+	{
+		switch(str)
+		{
+			case "pas_enhanced_titan_ai":
+				return "1"
+			case "pas_legion_smartcore":
+				return "2"
+			case "pas_legion_gunshield":
+				return "3"
+			case "pas_legion_spinup":
+				return "4"
+			case "pas_legion_chargeshot":
+				return "5"
+		}
+	}
+
+	if(titanKit == "vanguard")
+	{
+		switch(str)
 		{
 			case "pas_vanguard_shield":
-				return "1"	
+				return "1"
 			case "pas_vanguard_coremeter":
 				return "2"
 			case "pas_vanguard_rearm":
 				return "3"
-			case "pas_vanguard_doom": 
-				return "4"						
+			case "pas_vanguard_doom":
+				return "4"
 		}
 	}
 	return "0"
 }
 
-string function GetMonarchCoreIdFromString(string str, int coreStage) 
+string function GetMonarchCoreIdFromString(string str, int coreStage)
 {
-	if(str == "UNDEFINED") 
+	if(str == "UNDEFINED")
 	{
 		return "0"
 	}
-	if(coreStage == 0) 
+	if(coreStage == 0)
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "pas_vanguard_core1":
-				return "1"	
+				return "1"
 			case "pas_vanguard_core2":
 				return "2"
 			case "pas_vanguard_core3":
@@ -814,24 +853,24 @@ string function GetMonarchCoreIdFromString(string str, int coreStage)
 		}
 	}
 
-	if(coreStage == 1) 
+	if(coreStage == 1)
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "pas_vanguard_core4":
-				return "1"	
+				return "1"
 			case "pas_vanguard_core5":
 				return "2"
 			case "pas_vanguard_core6":
 				return "3"
 		}
 	}
-	if(coreStage == 2) 
+	if(coreStage == 2)
 	{
-		switch(str) 
+		switch(str)
 		{
 			case "pas_vanguard_core7":
-				return "1"	
+				return "1"
 			case "pas_vanguard_core8":
 				return "2"
 			case "pas_vanguard_core9":
@@ -845,27 +884,27 @@ string function GetMonarchCoreIdFromString(string str, int coreStage)
 ///Get data
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-array<WeaponBanStruct> function getWeaponBanData() 
+array<WeaponBanStruct> function getWeaponBanData()
 {
 	return file.weaponArray
 }
 
-array<UniversalBanStruct> function getGrenadeBanData() 
+array<UniversalBanStruct> function getGrenadeBanData()
 {
 	return file.grenadeArray
 }
 
-array<UniversalBanStruct> function getAbilityBanData() 
+array<UniversalBanStruct> function getAbilityBanData()
 {
 	return file.abilityArray
 }
 
-array<BoostBanStruct> function getBoostBanData() 
+array<BoostBanStruct> function getBoostBanData()
 {
 	return file.boostArray
 }
 
-array<TitanBanStruct> function getTitanBanData() 
+array<TitanBanStruct> function getTitanBanData()
 {
 	return file.titanArray
 }
@@ -909,7 +948,7 @@ void function InitData()
 	file.boostArray.append(createBoostBanStruct("burnmeter_random_foil" 	  ,3, 14))
 
 	file.weaponArray = []
-	//index 0-29 
+	//index 0-29
 	//index 0 - 22 primary
 	//index 23 - 25 sec
 	// index 26 - 29 at
@@ -941,7 +980,7 @@ void function InitData()
 	file.weaponArray.append(createWeaponBanStruct("mp_weapon_semipistol", "silencer"))
 	file.weaponArray.append(createWeaponBanStruct("mp_weapon_wingman", "silencer"))
 
-	
+
 	file.weaponArray.append(createWeaponBanStruct("mp_weapon_defender", "quick_charge"))
 	file.weaponArray.append(createWeaponBanStruct("mp_weapon_mgl"))
 	file.weaponArray.append(createWeaponBanStruct("mp_weapon_arc_launcher"))
@@ -955,12 +994,12 @@ void function InitData()
 	file.titanArray.append(createTitanBanStruct("tone"))
 	file.titanArray.append(createTitanBanStruct("vanguard"))
 	file.titanArray.append(createTitanBanStruct("vanguardCores", true))
-	
+
 	file.titanArray.append(createTitanBanStruct("scorch"))
 	file.titanArray.append(createTitanBanStruct("legion"))
 }
 
-UniversalBanStruct function createUniversalBanStruct(string name) 
+UniversalBanStruct function createUniversalBanStruct(string name)
 {
 	UniversalBanStruct newStruct
 	newStruct.name = name
@@ -968,10 +1007,10 @@ UniversalBanStruct function createUniversalBanStruct(string name)
 	return newStruct
 }
 
-WeaponBanStruct function createWeaponBanStruct(string name, string uniqueMod = "") 
+WeaponBanStruct function createWeaponBanStruct(string name, string uniqueMod = "")
 {
-	WeaponBanStruct newStruct 
-	newStruct.name = name 
+	WeaponBanStruct newStruct
+	newStruct.name = name
 	newStruct.disabled = false
 	newStruct.mod1 = "UNDEFINED"
 	newStruct.mod2 = "UNDEFINED"
@@ -981,7 +1020,7 @@ WeaponBanStruct function createWeaponBanStruct(string name, string uniqueMod = "
 	return newStruct
 }
 
-BoostBanStruct function createBoostBanStruct(string name, int persistantVarId, int burnMeterId) 
+BoostBanStruct function createBoostBanStruct(string name, int persistantVarId, int burnMeterId)
 {
 	BoostBanStruct newStruct
 	newStruct.name = name
@@ -991,7 +1030,7 @@ BoostBanStruct function createBoostBanStruct(string name, int persistantVarId, i
 	return newStruct
 }
 
-TitanBanStruct function createTitanBanStruct(string name, bool disabled = false) 
+TitanBanStruct function createTitanBanStruct(string name, bool disabled = false)
 {
 	TitanBanStruct newStruct
 	newStruct.name = name
@@ -1006,7 +1045,7 @@ TitanBanStruct function createTitanBanStruct(string name, bool disabled = false)
 ///Utility
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-array< string > function parseImportData(string importData) 
+array< string > function parseImportData(string importData)
 {
   array< string > importArray
   for(int i = 0; i < importData.len(); i++) {
