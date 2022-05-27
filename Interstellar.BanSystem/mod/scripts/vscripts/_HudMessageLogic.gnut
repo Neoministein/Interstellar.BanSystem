@@ -1,0 +1,133 @@
+untyped
+globalize_all_functions
+
+global struct HudMessageLoadout
+{
+   string loadoutName
+   array<int> defaultPosition
+   array<int> defaultRGBValues
+   float defaultDurration
+   string defaultHeadline
+   table < entity , string > message
+}
+
+
+struct
+{
+   table<string,HudMessageLoadout> hudMessageLoadouts
+}file
+
+HudMessageLoadout function CreateNewHudMessageLoadout( string loadoutName,array<int> defaultPosition,array<int> defaultRGBValues,float defaultDurration,string defaultHeadline)
+{
+   HudMessageLoadout newHudLoadout
+   newHudLoadout.loadoutName = loadoutName
+   newHudLoadout.defaultPosition = defaultPosition
+   newHudLoadout.defaultRGBValues = defaultRGBValues
+   newHudLoadout.defaultDurration = defaultDurration
+   newHudLoadout.defaultHeadline = defaultHeadline
+
+   AddNewHudMessageLoadout(newHudLoadout)
+   return newHudLoadout
+}
+
+void function AddNewHudMessageLoadout(HudMessageLoadout hudLoadout)
+{
+   file.hudMessageLoadouts[hudLoadout.loadoutName] <- hudLoadout
+}
+
+
+void function DisplayMessage(HudMessageLoadout hudLoadout, entity player)
+{
+   array<string> listOfMessages =  split(hudLoadout.message[player],"\n")
+
+   // +1 sec to durration to not have the text fade away when stuff is still displayed
+   float displayTime = 1 + hudLoadout.defaultDurration
+   if(listOfMessages.len() == 1)
+   {
+      displayTime = 0.5
+   }
+
+   SendHudMessage( player, hudLoadout.message[player], hudLoadout.defaultPosition[0],hudLoadout.defaultPosition[1],hudLoadout.defaultRGBValues[0],hudLoadout.defaultRGBValues[1],hudLoadout.defaultRGBValues[2], 255, 0, displayTime, 1 )
+
+}
+
+void function AddHudMessage(HudMessageLoadout hudLoadout, string messageToAdd,float durration, entity player)
+{
+   array<string> listOfMessages = [] 
+   try 
+   {
+      listOfMessages  =  split(hudLoadout.message[player],"\n") 
+   } 
+  catch (exception) 
+  {
+    hudLoadout.message[player] <- hudLoadout.defaultHeadline
+  }
+
+
+
+   for(int i = 0; i< listOfMessages.len(); i++ )
+   {
+      if(listOfMessages[i] == messageToAdd)
+      {
+         return
+      }
+   }
+
+   hudLoadout.message[player] += messageToAdd + "\n" 
+
+   //if durration < 0 use the loadout Default
+   if(durration <= 0)
+   {
+      durration = hudLoadout.defaultDurration + (listOfMessages.len() * 0.5)
+   }
+
+   thread RemoveAfterTime( messageToAdd,durration, hudLoadout, player)
+   DisplayMessage(hudLoadout,player)
+
+}
+
+void function RemoveHudMessage(string message, HudMessageLoadout hudLoadout, entity player)
+{
+   array<string> listOfMessages =  split(hudLoadout.message[player],"\n")
+   string updatedMessage = ""
+
+   for(int i = 0; i< listOfMessages.len(); i++)
+   {
+      if(message != listOfMessages[i])
+      {
+         updatedMessage += listOfMessages[i] + "\n"
+      }
+   }
+
+   hudLoadout.message[player] = updatedMessage
+
+   DisplayMessage(hudLoadout,player)
+}
+
+
+void function RemoveAfterTime(string message, float timetoWait , HudMessageLoadout hudLoadout, entity player)
+{
+   wait timetoWait
+
+   RemoveHudMessage(message, hudLoadout , player)
+}
+
+
+HudMessageLoadout function GetLoadoutByName(string loadoutName)
+{
+   try 
+   {
+      return file.hudMessageLoadouts[loadoutName]
+   } 
+   catch (exception) 
+   {
+      try 
+      {
+         return file.hudMessageLoadouts["Default"]
+      } 
+      catch (exception) 
+      {
+         return CreateNewHudMessageLoadout("Default",[1,0],[255,0,0 ],5,"Invalid Message Key:\n")
+      }
+   }
+}

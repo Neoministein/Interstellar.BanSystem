@@ -1,0 +1,690 @@
+untyped
+global function BanLogic_Init
+global function  CheckTitanForBanLogic
+
+
+void function BanLogic_Init()
+{
+	// featured mode settings
+	AddCallback_OnPlayerRespawned( BanLogicInGame )
+	
+
+	AddCallback_OnUpdateDerivedPlayerTitanLoadout(CheckTitanForBanLogic)
+	SetLoadoutGracePeriodEnabled( false )
+
+	AddCallback_GameStateEnter( eGameState.Playing, OnGameStartePlay )
+	//AddCallback_OnClientConnecting()
+
+	CreateNewHudMessageLoadout("Interstellar.BanMod",[1,0],[74,153,255],5,"Your kit is using banned weapons:\n")
+}
+
+void function OnGameStartePlay()
+{
+	TitanEarning_OnPlaying()
+}
+
+void function TitanEarning_OnPlaying()
+{
+    wait 0.001 // wait a frame to make sure the normal earn meter setting is done and doesn't override our one.
+
+	// need to call this first to not cancel the boost checks 
+	SetCallback_EarnMeterRewardEarned( BoostEarning_TitanEarned )
+
+	// woops turns out changing the titan availability to "custom" without checking the mode made thinks bad .... 
+	if ( Riff_TitanAvailability() == eTitanAvailability.Never )
+	{
+		return
+	}
+
+    Riff_ForceTitanAvailability( eTitanAvailability.Custom ) 
+    svGlobal.titanAvailabilityCheck = IsTitanAvailable
+
+    SetCallback_EarnMeterGoalEarned( TitanEarning_TitanEarned )
+}
+
+void function BoostEarning_TitanEarned( entity player )
+{
+	HudMessageLoadout banHudLoadout = GetLoadoutByName("Interstellar.BanMod")
+
+	if( GetFirstAvailableBoost().name != "Null" ) //check if boosts are disabled
+	{
+
+		BoostBanStruct currentBoost = GetBoostStructById(player.GetPersistentVar("burnmeterSlot"))
+		
+		if(currentBoost.disabled) 
+		{
+			currentBoost = GetFirstAvailableBoost()
+		}
+
+		EarnObject earnobject = EarnObject_GetById(currentBoost.burnMeterId)
+		
+		BurnReward burncard = BurnReward_GetByRef( earnobject.ref )
+
+		while ( burncard.ref == "burnmeter_random_foil" )
+			burncard = BurnReward_GetRandom()
+
+		for ( int i = 0; i < BurnMeter_GetLimitedRewardCount( player ); i++ )
+			BurnMeter_GiveRewardDirect( player, burncard.ref )
+
+		PlayerEarnMeter_DisableReward( player )
+	} 
+	else
+	{
+		AddHudMessage(banHudLoadout,"Boost removed", 0, player)
+	}
+}
+
+void function TitanEarning_TitanEarned( entity player )
+{
+    if ( GetFirstAvailableTitan().name != "Null") //Check if all titans are banned
+        SetTitanAvailable( player )
+	else 
+    {
+        float oldRewardFrac = PlayerEarnMeter_GetRewardFrac( player )
+        PlayerEarnMeter_Reset( player )
+        PlayerEarnMeter_SetRewardFrac( player, oldRewardFrac )
+        PlayerEarnMeter_EnableReward( player )
+    }
+}
+
+
+// TODO  stesstest
+
+void function BanLogicInGame(entity player)
+{
+	bool shouldChangeLoadout = false
+	// create loadout struct
+	PilotLoadoutDef modifiedLoadout = clone GetActivePilotLoadout( player )
+
+
+	// Weapon ban vars 
+	bool shouldRemovePrim = false
+	bool shouldRemoveSec = false
+	bool shouldRemoveAbility = false
+	bool shouldRemoveWeapon3 = false
+	bool shouldRemoveGrenade = false
+
+	HudMessageLoadout banHudLoadout = GetLoadoutByName("Interstellar.BanMod")
+	
+
+
+	shouldChangeLoadout = true 
+
+	WeaponBanStruct weapon
+        
+	for(int CheckingWeapon = 0; CheckingWeapon < getWeaponBanData().len(); CheckingWeapon++ )
+	{
+		 weapon = getWeaponBanData()[CheckingWeapon]
+
+		//check Primary
+		if(modifiedLoadout.primary == weapon.name && weapon.disabled)
+		{
+			modifiedLoadout.primaryMods[0] = ""
+			modifiedLoadout.primaryMods[1] = ""
+				
+			WeaponBanStruct newWeapon = GetFirstAvailablePrimaryWeapon()
+			
+			if (newWeapon.name != "Null" )
+			{ 
+				modifiedLoadout.primary = newWeapon.name
+				
+				
+				AddHudMessage(banHudLoadout,"Primary changed to: " + newWeapon.name, 0, player)
+
+				// if mod1 is forced && mod 2 is free and its the same as forced mod1 it crashes so making sure that this wont happen 
+				if( newWeapon.mod1 != "UNDEFINED" && modifiedLoadout.primaryMods[1]  != newWeapon.mod1)
+				{
+					modifiedLoadout.primaryMods[0] = newWeapon.mod1
+				}
+
+				if( newWeapon.mod2 != "UNDEFINED" && modifiedLoadout.primaryMods[0]  != newWeapon.mod2)
+				{
+					modifiedLoadout.primaryMods[1] = newWeapon.mod2
+				}	
+
+				if( newWeapon.visor[0] != "UNDEFINED" )
+				{
+					modifiedLoadout.primaryAttachments = newWeapon.visor
+				}
+				else
+				{ 
+					modifiedLoadout.primaryAttachments = [""]
+				}
+			}
+			else
+			{
+				shouldRemovePrim = true
+				AddHudMessage(banHudLoadout,"Primary removed", 0, player)
+			}
+		}
+			//check Secondary Slot
+			else if(modifiedLoadout.secondary == weapon.name && weapon.disabled)
+			{
+
+				modifiedLoadout.secondaryMods[0] = ""
+				modifiedLoadout.secondaryMods[1] = ""
+
+
+				 WeaponBanStruct  newWeapon
+
+				if ( GetWeaponInfoFileKeyField_Global( player.GetMainWeapons()[ 1 ].GetWeaponClassName(), "menu_category" ) == "at" )
+				{
+				   newWeapon = GetFirstAvailableAtWeapon()
+				}
+				else
+				{
+			       newWeapon = GetFirstAvailableSecWeapon()
+				}
+				
+				if (newWeapon.name != "Null" )
+				{ 
+					modifiedLoadout.secondary = newWeapon.name
+					AddHudMessage(banHudLoadout,"Secondary changed to: " + newWeapon.name, 0, player)
+
+					if( weapon.mod1 != "UNDEFINED")
+					{
+						modifiedLoadout.secondaryMods[0] = newWeapon.mod1
+					}
+
+					if( weapon.mod2 != "UNDEFINED")
+					{
+						modifiedLoadout.secondaryMods[1] = newWeapon.mod2
+					}	
+				}
+				else
+				{
+					shouldRemoveSec = true
+					AddHudMessage(banHudLoadout,"Secondary removed", 0, player)
+				}
+			}
+				//check 3rd Slot
+			else if(modifiedLoadout.weapon3 == weapon.name && weapon.disabled)
+			{
+
+				modifiedLoadout.weapon3Mods[0] = ""
+				modifiedLoadout.weapon3Mods[1] = ""
+
+				WeaponBanStruct  newWeapon
+ 				if ( GetWeaponInfoFileKeyField_Global( player.GetMainWeapons()[ 2 ].GetWeaponClassName(), "menu_category" ) == "at" )
+				{
+				   newWeapon = GetFirstAvailableAtWeapon()
+				}
+				else
+				{
+			       newWeapon = GetFirstAvailableSecWeapon()
+				}
+				
+				if (newWeapon.name != "Null" )
+				{ 
+					modifiedLoadout.weapon3 = newWeapon.name
+					
+					AddHudMessage(banHudLoadout,"Weapon 3 changed to: " + newWeapon.name, 0, player)
+
+					if( newWeapon.mod1 != "UNDEFINED")
+					{
+						modifiedLoadout.weapon3Mods[0] = newWeapon.mod1
+					}
+
+					if( newWeapon.mod2 != "UNDEFINED")
+					{
+						modifiedLoadout.weapon3Mods[1] = newWeapon.mod2
+					}	
+				}
+				else
+				{
+					shouldRemoveWeapon3 = true
+					AddHudMessage(banHudLoadout,"Weapon 3 removed", 0, player)
+				}
+			}
+			if(modifiedLoadout.primary == weapon.name && (weapon.mod1 != "UNDEFINED" || weapon.mod2 != "UNDEFINED" ))
+			{
+				if(weapon.mod1 != "UNDEFINED")
+				{
+					modifiedLoadout.primaryMods[0] = weapon.mod1
+				}
+				if(weapon.mod2 != "UNDEFINED")
+				{
+					modifiedLoadout.primaryMods[1] = weapon.mod2
+				}
+				if(weapon.visor[0] != "UNDEFINED")
+				{
+					modifiedLoadout.primaryAttachments = weapon.visor
+				}
+			}
+			if(modifiedLoadout.secondary == weapon.name && (weapon.mod1 != "UNDEFINED" || weapon.mod2 != "UNDEFINED" ))
+			{
+				if(weapon.mod1 != "UNDEFINED")
+				{
+					modifiedLoadout.secondaryMods[0] = weapon.mod1
+				}
+				
+				if(weapon.mod2 != "UNDEFINED")
+				{
+					modifiedLoadout.secondaryMods[1] = weapon.mod2
+				}
+			}
+			if(modifiedLoadout.weapon3 == weapon.name && (weapon.mod1 != "UNDEFINED" || weapon.mod2 != "UNDEFINED" ))
+			{
+				if(weapon.mod1 != "UNDEFINED")
+				{
+					modifiedLoadout.weapon3Mods[0] = weapon.mod1
+				}
+				if(weapon.mod2 != "UNDEFINED")
+				{
+					modifiedLoadout.weapon3Mods[1] = weapon.mod2
+				}
+			}
+		}
+
+		// Granades
+		for(int i = 0; i < getGrenadeBanData().len(); i++)
+		{
+			UniversalBanStruct grenade = getGrenadeBanData()[i]
+			if(grenade.name == modifiedLoadout.ordnance)
+			{
+				if(grenade.disabled) 
+				{
+					UniversalBanStruct newUniversalBanStruct = GetFirstAvailableGrenade()
+				
+					if(newUniversalBanStruct.name != "Null")
+					{
+				    	modifiedLoadout.ordnance = newUniversalBanStruct.name
+						AddHudMessage(banHudLoadout,"Ordnance changed to: " + newUniversalBanStruct.name, 0, player)
+					}
+					else
+					{
+						shouldRemoveGrenade = true
+						AddHudMessage(banHudLoadout,"Ordnance removed", 0, player)
+					}
+				}
+				break
+			} 
+		}
+
+		//Ability
+		for(int i = 0; i < getAbilityBanData().len(); i++)
+		{
+			UniversalBanStruct ability =  getAbilityBanData()[i]
+			if(ability.name == modifiedLoadout.special)
+			{
+				if(ability.disabled) {
+					UniversalBanStruct NewAbilityStruct = GetFirstAvailableAbility()
+
+					if(NewAbilityStruct.name != "Null" )
+					{
+				 		modifiedLoadout.special = NewAbilityStruct.name
+						AddHudMessage(banHudLoadout,"Ability changed to: "+ NewAbilityStruct.name, 0, player)
+					}
+					else
+					{
+				 		shouldRemoveAbility = true
+						AddHudMessage(banHudLoadout,"Ability removed", 0, player)
+					}
+				}
+				break
+			}
+		}
+
+		//boost
+		BoostBanStruct currentBoost = GetBoostStructById(player.GetPersistentVar("burnmeterSlot"))
+		
+		if(currentBoost.disabled) 
+		{
+			BoostBanStruct newBoost = GetFirstAvailableBoost()
+
+			if(newBoost.name != "Null")
+			{
+				AddHudMessage(banHudLoadout,"Boost changed to: "+ newBoost.name, 0, player)
+			}
+			else
+			{
+				AddHudMessage(banHudLoadout,"Boost removed", 0, player)
+			}
+		}
+	
+	
+	// dont wanna give a new loadout if it's not necessary, could break other callbacks
+	if ( shouldChangeLoadout )
+	{
+		GivePilotLoadout( player, modifiedLoadout )
+	}
+
+	if(shouldRemovePrim)
+	{
+		player.TakeWeapon(modifiedLoadout.primary)
+	}
+
+	if(shouldRemoveSec)
+	{
+		player.TakeWeapon(modifiedLoadout.secondary)
+	}
+
+	if(shouldRemoveWeapon3)
+	{
+		player.TakeWeapon(modifiedLoadout.weapon3)
+	}
+
+	if(shouldRemovePrim &&  shouldRemoveSec && shouldRemoveWeapon3)
+	{
+		player.GiveWeapon( "mp_weapon_rocket_launcher")
+		player.SetActiveWeaponByName( "mp_weapon_rocket_launcher" )
+	}
+	
+	if(shouldRemoveGrenade)
+		player.TakeOffhandWeapon( OFFHAND_ORDNANCE )
+
+	if(shouldRemoveAbility)
+		player.TakeOffhandWeapon( OFFHAND_SPECIAL )
+
+}
+
+WeaponBanStruct function GetFirstAvailablePrimaryWeapon()
+{
+	for(int i = 0; i < 23; i++ )
+	{
+		WeaponBanStruct CurrentCheckingWeapon  = getWeaponBanData()[i]
+		
+		if(CurrentCheckingWeapon.disabled == false)
+		{
+
+			return CurrentCheckingWeapon
+			
+		}
+	}
+
+	return createWeaponBanStruct("Null")
+}
+
+
+WeaponBanStruct function GetFirstAvailableSecWeapon()
+{
+ for(int i = 23; i < 26; i++ )
+	{
+		WeaponBanStruct CurrentCheckingWeapon  =	getWeaponBanData()[i]
+		
+		if(CurrentCheckingWeapon.disabled == false)
+		{
+
+			return  CurrentCheckingWeapon
+		}
+	}
+	
+	return createWeaponBanStruct("Null")
+}
+
+WeaponBanStruct function GetFirstAvailableAtWeapon()
+{
+ 	for(int i = 27; i < 30; i++ )
+	{
+		WeaponBanStruct CurrentCheckingWeapon  =  getWeaponBanData()[i]
+		
+		if(CurrentCheckingWeapon.disabled == false)
+		{
+			return CurrentCheckingWeapon
+		
+		}
+	}
+
+	return createWeaponBanStruct("Null")
+}
+
+UniversalBanStruct function GetFirstAvailableGrenade()
+{
+	for(int i = 0; i < getGrenadeBanData().len(); i++)
+	{
+		UniversalBanStruct CurrentCheckingGrenade = getGrenadeBanData()[i]
+		if(CurrentCheckingGrenade.disabled == false)
+		{
+			return CurrentCheckingGrenade
+		}
+	}
+
+	return createUniversalBanStruct("Null")
+}
+
+UniversalBanStruct function GetFirstAvailableAbility()
+{
+	for(int i = 0; i < getAbilityBanData().len(); i++)
+	{
+		UniversalBanStruct CurrentCheckingAbility = getAbilityBanData()[i]
+		if(CurrentCheckingAbility.disabled == false)
+		{
+			return CurrentCheckingAbility
+		}
+	}
+
+	return createUniversalBanStruct("Null")
+}
+
+BoostBanStruct function GetFirstAvailableBoost()
+{
+	for(int i = 0; i < getBoostBanData().len(); i++)
+	{
+		BoostBanStruct CurrentCheckingBoost = getBoostBanData()[i]
+
+		if(CurrentCheckingBoost.disabled == false)
+		{
+			return CurrentCheckingBoost
+		}
+	}
+	return createBoostBanStruct("Null", 0,0)
+}
+
+TitanBanStruct function GetFirstAvailableTitan()
+{
+	
+	for(int i = 0; i < getTitanBanData().len(); i++)
+	{
+		TitanBanStruct CurrentCheckingTitan = getTitanBanData()[i]
+		if(!CurrentCheckingTitan.disabled)
+		{
+			return CurrentCheckingTitan
+		}
+	}
+	return createTitanBanStruct("Null")
+}
+
+void function CheckTitanForBanLogic(entity player,TitanLoadoutDef currentTitanLoadout)	
+{
+	
+
+	int titanLoadoutIndex 
+	TitanBanStruct	titanStruct
+	HudMessageLoadout banHudLoadout = GetLoadoutByName("Interstellar.BanMod")
+		
+	// if titan is banned get an unbaned titan and get all the skins for it 
+	if(GetTitanStructByName(currentTitanLoadout.titanClass).disabled)
+	{
+		titanStruct  = GetFirstAvailableTitan()
+
+			
+		if(titanStruct.name == "Null")
+		{
+			
+			return
+		}
+
+
+		titanLoadoutIndex = GetTitanLoadoutIndexByName(titanStruct.name)
+
+		AddHudMessage(banHudLoadout,"Titan changet to  "+ titanStruct.name, 0, player)
+			
+
+			
+		currentTitanLoadout.titanClass = titanStruct.name
+
+		currentTitanLoadout.primaryMod = GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "primaryMod" )
+		currentTitanLoadout.ordnance =  GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "ordnance" )
+		currentTitanLoadout.special =  GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "special" )
+		currentTitanLoadout.antirodeo = GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "antirodeo" )
+
+		currentTitanLoadout.passive1 			= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "passive1" )
+		currentTitanLoadout.passive2 			= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "passive2" )
+		currentTitanLoadout.passive3 			= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "passive3" )
+		currentTitanLoadout.passive4 			= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "passive4" )
+		currentTitanLoadout.passive5 			= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "passive5" )
+		currentTitanLoadout.passive6 			= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "passive6" )
+
+		// I have to find out how prime Titans are handeled  this is  still in dev  so there are some skin index wierdness 
+		currentTitanLoadout.isPrime				= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "isPrime" )
+		currentTitanLoadout.primeCamoIndex		= GetValidatedPersistentLoadoutValueInt( player, "titan", titanLoadoutIndex, "primeCamoIndex" )
+
+
+		currentTitanLoadout.camoIndex			= GetValidatedPersistentLoadoutValueInt( player, "titan", titanLoadoutIndex, "camoIndex" )
+		currentTitanLoadout.skinIndex			= GetValidatedPersistentLoadoutValueInt( player, "titan", titanLoadoutIndex, "skinIndex" ) 
+		currentTitanLoadout.decalIndex			= GetValidatedPersistentLoadoutValueInt( player, "titan", titanLoadoutIndex, "decalIndex" )
+		currentTitanLoadout.primaryCamoIndex	= GetValidatedPersistentLoadoutValueInt( player, "titan", titanLoadoutIndex, "primaryCamoIndex" )
+		currentTitanLoadout.primarySkinIndex	= GetValidatedPersistentLoadoutValueInt( player, "titan", titanLoadoutIndex, "primarySkinIndex" ) 
+		currentTitanLoadout.titanExecution 		= GetValidatedPersistentLoadoutValue( player, "titan", titanLoadoutIndex, "titanExecution" )
+		currentTitanLoadout.showArmBadge		= GetValidatedPersistentLoadoutValueInt( player, "titan", titanLoadoutIndex, "showArmBadge" )
+	
+	} 
+	else
+	{
+		//if its not banned just look up the struct to make shure all passives are set right 
+		titanStruct = GetTitanStructByName(currentTitanLoadout.titanClass)
+	}
+	
+	if(titanStruct.passive1 != "UNDEFINED")
+	{
+		currentTitanLoadout.passive1 =  titanStruct.passive1 
+		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive1 , 0, player)
+	}
+	
+	if(titanStruct.passive2 != "UNDEFINED")
+	{
+		currentTitanLoadout.passive2 =  titanStruct.passive2
+		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive2 , 0, player)
+	}
+	
+	if(titanStruct.passive3 != "UNDEFINED")
+	{
+		currentTitanLoadout.passive3 =  titanStruct.passive3
+		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive3 , 0, player)
+	}
+
+	if( titanStruct.name == "vanguard" )
+	{
+		titanStruct = GetTitanStructByName("vanguardCores")
+			
+		if(titanStruct.passive1 != "UNDEFINED")
+		{
+			currentTitanLoadout.passive4 =  titanStruct.passive1
+			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive1 , 0, player)
+		}
+	
+		if(titanStruct.passive2 != "UNDEFINED")
+		{
+				
+			currentTitanLoadout.passive5 =  titanStruct.passive2
+			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive2 , 0, player)
+		}
+
+	
+		if(titanStruct.passive3 != "UNDEFINED")
+		{
+			currentTitanLoadout.passive6 =  titanStruct.passive3
+			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive3 , 0, player)
+		}
+	}
+	else
+	{
+		currentTitanLoadout.passive4 = ""
+		currentTitanLoadout.passive5 = ""
+		currentTitanLoadout.passive6 = ""
+	}
+}
+
+
+TitanBanStruct function GetTitanStructByName(string TitanName)
+{
+	array<TitanBanStruct> titanArray = getTitanBanData()
+
+  switch(TitanName)
+  {
+	  // it uses the Ui arrangement 
+	case"ion" :
+	return titanArray[2]
+
+	case "scorch" :
+	return titanArray[6]
+
+	case "northstar":
+	return titanArray[0]
+
+	case "ronin" :
+	return titanArray[1]
+
+	case "tone" :
+	return titanArray[3]
+
+	case "legion" :
+	return titanArray[7]
+
+	case "vanguard" :
+	return titanArray[4] 
+
+	case "vanguardCores" :
+	return titanArray[5] 
+	}
+
+	print("Titan Name Out of Range returning fallback: 0 ")
+	return titanArray[0]
+}
+
+
+BoostBanStruct function GetBoostStructById(var id)
+{
+	for(int i = 0; i <  getBoostBanData().len();i++)
+	{
+		if(getBoostBanData()[i].persistantVarId == id) 
+		{
+			return getBoostBanData()[i]
+		}
+	}
+	return getBoostBanData()[0]
+}
+
+int function GetTitanLoadoutIndexByName(string TitanName)
+{
+	switch(TitanName)
+	{
+	
+	case"ion" :
+	return 0
+
+	case "scorch" :
+	return 1
+
+	case "northstar":
+	return 2 
+
+	case "ronin" :
+	return 3
+
+	case "tone" :
+	return 4
+
+	case "legion" :
+	return 5
+
+	case "vanguard" :
+	return 6 
+	}
+
+	return 0
+}
+
+
+EarnObject function EarnObject_GetById( int id )
+{
+	foreach ( EarnObject earnObject in earn.earnObjects )
+	{
+		if ( earnObject.id == id )
+			return earnObject
+	}
+
+	Assert( false, "Invalid earn object id " + id )
+	EarnObject earnObject
+	return earnObject
+}
