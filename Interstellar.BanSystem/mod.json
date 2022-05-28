@@ -1,6 +1,6 @@
 {
 	"Name" : "Interstellar.ServerBanSystem",
-	"Description" : "Allows the disabling of Titans,Boosts,Pilot Abiliteys And Grenades with Auto Replacements ",
+	"Description" : "Allows the disabling of Titans, Boosts, Pilot abilities and Grenades with Auto Replacements",
     "Version": "2.0.0",
 	"LoadPriority": 0,
 	"ConVars": [
