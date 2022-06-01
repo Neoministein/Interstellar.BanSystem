@@ -100,9 +100,11 @@ void function ImportData()
     	importArray = parseImportData( cVar )
 		if(importArray.len() == 177)
 		{
-			SetPlaylistVarOverride("BAN_DATA_0", cVar.slice(0,60))
-			SetPlaylistVarOverride("BAN_DATA_1", cVar.slice(60,120))
-			SetPlaylistVarOverride("BAN_DATA_2", cVar.slice(120))
+			if(IsLobby()) {
+				SetPlaylistVarOverride("BAN_DATA_0", dataToStore.slice(0,60))
+				SetPlaylistVarOverride("BAN_DATA_1", dataToStore.slice(60,120))
+				SetPlaylistVarOverride("BAN_DATA_2", dataToStore.slice(120))
+			}
 		}
 		else
 		{
