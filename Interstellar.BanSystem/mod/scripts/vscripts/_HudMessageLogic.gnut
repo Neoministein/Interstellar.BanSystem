@@ -46,9 +46,10 @@ void function DisplayMessage(HudMessageLoadout hudLoadout, entity player)
    {
       displayTime = 0.5
    }
-
-   SendHudMessage( player, hudLoadout.message[player], hudLoadout.defaultPosition[0],hudLoadout.defaultPosition[1],hudLoadout.defaultRGBValues[0],hudLoadout.defaultRGBValues[1],hudLoadout.defaultRGBValues[2], 255, 0, displayTime, 1 )
-
+   if (IsValid( player )) 
+   {
+      SendHudMessage( player, hudLoadout.message[player], hudLoadout.defaultPosition[0],hudLoadout.defaultPosition[1],hudLoadout.defaultRGBValues[0],hudLoadout.defaultRGBValues[1],hudLoadout.defaultRGBValues[2], 255, 0, displayTime, 1 )
+   }
 }
 
 void function AddHudMessage(HudMessageLoadout hudLoadout, string messageToAdd,float durration, entity player)
