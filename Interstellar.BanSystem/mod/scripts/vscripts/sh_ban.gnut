@@ -176,7 +176,7 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 	if (file.admins.len() == 0) {
 		if ( GetConVarInt( "ns_private_match_only_host_can_change_settings" ) >= 1 )
 		{
-			if ( !NSIsPlayerIndexLocalPlayer( player.GetPlayerIndex() ) )
+			if ( !NSIsPlayerLocalPlayer( player ) )
 			{
 				return true
 			}
