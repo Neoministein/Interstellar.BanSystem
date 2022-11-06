@@ -144,7 +144,7 @@ void function BanLogicInGame(entity player)
 
 				if( newWeapon.visor[0] != "UNDEFINED" )
 				{
-					modifiedLoadout.primaryAttachments = newWeapon.visor
+					modifiedLoadout.primaryAttachments = clone newWeapon.visor
 				}
 				else
 				{
@@ -248,7 +248,7 @@ void function BanLogicInGame(entity player)
 				}
 				if(weapon.visor[0] != "UNDEFINED")
 				{
-					modifiedLoadout.primaryAttachments = weapon.visor
+					modifiedLoadout.primaryAttachments = clone weapon.visor
 				}
 			}
 			if(modifiedLoadout.secondary == weapon.name && (weapon.mod1 != "UNDEFINED" || weapon.mod2 != "UNDEFINED" ))
