@@ -7,15 +7,64 @@ void function BanLogic_Init()
 {
 	// featured mode settings
 	AddCallback_OnPlayerRespawned( BanLogicInGame )
-
+	AddCallback_OnUpdateDerivedPilotLoadout( EditExecution )
 
 	AddCallback_OnUpdateDerivedPlayerTitanLoadout(CheckTitanForBanLogic)
 	SetLoadoutGracePeriodEnabled( false )
-
+	AddCallback_IsValidMeleeExecutionTarget( IsExecutionAllowed )
 	AddCallback_GameStateEnter( eGameState.Playing, OnGameStartePlay )
 	//AddCallback_OnClientConnecting()
 
 	CreateNewHudMessageLoadout("Interstellar.BanMod",[1,0],[74,153,255],5,"Your kit is using banned weapons:\n")
+}
+
+bool function IsExecutionAllowed(entity attacker, entity target)
+{
+	if (attacker.IsTitan()) {
+		return true
+	}
+
+	return GetFirstAvailableExecution().name == "Null" ? false : true
+}
+
+void function EditExecution(PilotLoadoutDef modifiedLoadout)
+{
+
+	bool hasExecutionBan = false
+	for(int i = 0; i < getExecutionBanData().len(); i++)
+	{
+
+		UniversalBanStruct execution =  getExecutionBanData()[i]
+
+		if(execution.disabled)
+		{
+			hasExecutionBan = true
+		}
+
+		if(execution.name == "execution_random" && hasExecutionBan)
+		{
+			UniversalBanStruct NewExecutionStruct = GetRandomAvailableExecution()
+
+			if(NewExecutionStruct.name != "Null" )
+			{
+				modifiedLoadout.execution = NewExecutionStruct.name
+			}
+		}
+
+		if(execution.name == modifiedLoadout.execution)
+		{
+
+			if(execution.disabled) {
+				UniversalBanStruct NewExecutionStruct = GetFirstAvailableExecution()
+
+				if(NewExecutionStruct.name != "Null" )
+				{
+			 		modifiedLoadout.execution = NewExecutionStruct.name
+				}
+			}
+			break
+		}
+	}
 }
 
 void function OnGameStartePlay()
@@ -88,14 +137,11 @@ void function TitanEarning_TitanEarned( entity player )
 }
 
 
-// TODO  stesstest
-
 void function BanLogicInGame(entity player)
 {
 	bool shouldChangeLoadout = false
 	// create loadout struct
 	PilotLoadoutDef modifiedLoadout = clone GetActivePilotLoadout( player )
-
 
 	// Weapon ban vars
 	bool shouldRemovePrim = false
@@ -105,8 +151,6 @@ void function BanLogicInGame(entity player)
 	bool shouldRemoveGrenade = false
 
 	HudMessageLoadout banHudLoadout = GetLoadoutByName("Interstellar.BanMod")
-
-
 
 	shouldChangeLoadout = true
 
@@ -236,6 +280,7 @@ void function BanLogicInGame(entity player)
 					AddHudMessage(banHudLoadout,"Weapon 3 removed", 0, player)
 				}
 			}
+			//Weapon mods
 			if(modifiedLoadout.primary == weapon.name && (weapon.mod1 != "UNDEFINED" || weapon.mod2 != "UNDEFINED" ))
 			{
 				if(weapon.mod1 != "UNDEFINED")
@@ -339,6 +384,24 @@ void function BanLogicInGame(entity player)
 			else
 			{
 				AddHudMessage(banHudLoadout,"Boost removed", 0, player)
+			}
+		}
+
+		//execution
+		for(int i = 0; i < getExecutionBanData().len(); i++)
+		{
+			UniversalBanStruct execution =  getExecutionBanData()[i]
+			if(execution.name == modifiedLoadout.execution)
+			{
+				if(execution.disabled) {
+					UniversalBanStruct NewExecutionStruct = GetFirstAvailableExecution()
+
+					if(NewExecutionStruct.name != "Null" )
+					{
+						AddHudMessage(banHudLoadout,"execution changed to: " + NewExecutionStruct.name, 0, player)
+					}
+				}
+				break
 			}
 		}
 
@@ -454,6 +517,37 @@ UniversalBanStruct function GetFirstAvailableAbility()
 	}
 
 	return createUniversalBanStruct("Null")
+}
+
+UniversalBanStruct function GetFirstAvailableExecution()
+{
+	// -1 because random exe is not allowed when one exe is banned
+	for(int i = 0; i < getExecutionBanData().len() - 1 ; i++)
+	{
+		UniversalBanStruct CurrentCheckingExecution = getExecutionBanData()[i]
+		if(CurrentCheckingExecution.disabled == false)
+		{
+			return CurrentCheckingExecution
+		}
+	}
+
+	return createUniversalBanStruct("Null")
+}
+
+UniversalBanStruct function GetRandomAvailableExecution()
+{
+	// -1 because random exe is not allowed when one exe is banned
+	for(int i = 0; i < 30; i++)
+	{
+		UniversalBanStruct CurrentCheckingExecution = getExecutionBanData()[RandomInt(getExecutionBanData().len() - 1)]
+
+		if(CurrentCheckingExecution.disabled == false)
+		{
+			return CurrentCheckingExecution
+		}
+	}
+
+	return GetFirstAvailableExecution()
 }
 
 BoostBanStruct function GetFirstAvailableBoost()

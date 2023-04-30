@@ -3,6 +3,12 @@ global function OnMenu_Open
 global function OpenBanMenu
 global function ImportBanConfig
 
+const UI_PLAYER_INDEX = 0
+const UI_EQUIPMENT_INDEX = 1
+const UI_WEAPON_INDEX = 2
+const UI_TITAN_INDEX = 3
+const UI_BOOST_INDEX = 4
+
 struct BoolAttributte {
   bool disabled = false
   asset image
@@ -28,6 +34,7 @@ struct Loadout {
 }
 
 struct Category {
+    string prefix = ""
     string displayName
 
     array<Loadout> loadouts
@@ -66,6 +73,7 @@ struct {
   array<var> buttons = []
   array<var> loadoutDisplays = []
   PilotDisplay pilot
+  PilotDisplay equipment
   LoadoutDisplay weapon
   LoadoutDisplay titan
   BoostDisplay boost
@@ -99,15 +107,17 @@ void function InitNorthstarCustomMatchSettingsBanMenu()
   file.loadoutDisplays = GetElementsByClassname( file.menu, "loadoutDisplay" )
 
   initPilot()
+  initEquipment()
   initWeapon()
   initTitan()
   initBoost()
 
   file.buttons = GetElementsByClassname( file.menu, "BanSettingCategoryButton" )
   RHud_SetText( file.buttons[0], Localize("#MODE_SETTING_BAN_PILOT") )
-  RHud_SetText( file.buttons[1], Localize("#MODE_SETTING_BAN_WEAPON") )
-  RHud_SetText( file.buttons[2], Localize("#MODE_SETTING_BAN_TITAN") )
-  RHud_SetText( file.buttons[3], Localize("#MODE_SETTING_BAN_BOOST") )
+  RHud_SetText( file.buttons[1], Localize("#MODE_SETTING_BAN_EQUIPMENT") )
+  RHud_SetText( file.buttons[2], Localize("#MODE_SETTING_BAN_WEAPON") )
+  RHud_SetText( file.buttons[3], Localize("#MODE_SETTING_BAN_TITAN") )
+  RHud_SetText( file.buttons[4], Localize("#MODE_SETTING_BAN_BOOST") )
 
   selectButton(file.buttons, 2, 0)
   selectDisplay(file.loadoutDisplays, 2, 0)
@@ -121,7 +131,6 @@ void function InitNorthstarCustomMatchSettingsBanMenu()
 
 void function OnMenu_Open()
 {
-  AddMenuFooterOption( file.menu, BUTTON_B, "#B_BUTTON_BACK", "#BACK" )
   reloadCurrentScreen()
 }
 
@@ -176,9 +185,9 @@ void function clickOpenSubMenu(var pressedButton) {
 
   //This defines the screen which calls this button so that weapons and titans can use the same logic
   LoadoutDisplay loadout
-  if (file.selected == 1) {
+  if (file.selected == UI_WEAPON_INDEX) {
     loadout = file.weapon
-  } else if (file.selected == 2) {
+  } else if (file.selected == UI_TITAN_INDEX) {
     loadout = file.titan
   }
 
@@ -234,7 +243,7 @@ void function clickSelectInSubmenu(var pressedButton)
   string uiType
   LoadoutDisplay loadoutDisplay
   //This defines the screen which calls this button so that weapons and titans can use the same logic
-  if (file.selected == 1) {
+  if (file.selected == UI_WEAPON_INDEX) {
     uiType = "weapon"
     loadoutDisplay = file.weapon
   } else {
@@ -314,7 +323,7 @@ void function HideSubmenuBackgroundElems()
 {
   int subLoadout
   array<var> elems
-  if(file.selected == 1)
+  if(file.selected == UI_WEAPON_INDEX)
   {
     elems = GetElementsByClassname( file.menu, "HideWhenEditing_" + file.weapon.selectedAttribute )
     subLoadout = file.weapon.selectedLoadout
@@ -345,7 +354,7 @@ void function RestoreHiddenSubmenuBackgroundElems()
 			Hud_Show( elem )
 	}
   //This is here to not show the sights on weapon categories without sights
-  if(file.weapon.categorySelected > 4 && file.selected == 1)
+  if(file.weapon.categorySelected > 4 && file.selected == UI_WEAPON_INDEX)
   {
     array<var> elems = GetElementsByClassname( file.menu , "HideWhenNoVisor" )
 	  foreach ( elem in elems )
@@ -384,13 +393,15 @@ void function reloadCurrentScreen()
 
 void function reloadActiveUI()
 {
-  if (file.selected == 0) {
+  if (file.selected == UI_PLAYER_INDEX) {
     reloadPilotScreen()
-  } else if(file.selected == 1) {
+  } else if (file.selected == UI_EQUIPMENT_INDEX)  {
+    reloadEquipmentScreen()
+  } else if(file.selected == UI_WEAPON_INDEX) {
     loadWeaponCategory(file.weapon.categories[file.weapon.categorySelected])
-  } else if (file.selected == 2) {
+  } else if (file.selected == UI_TITAN_INDEX) {
     loadTitanCategory(file.titan.categories[file.titan.categorySelected])
-  } else if (file.selected == 3) {
+  } else if (file.selected == UI_BOOST_INDEX) {
     reloadBoostScreen()
   }
   RestoreHiddenSubmenuBackgroundElems()
@@ -403,6 +414,15 @@ void function callPilotButtonClick(var pressedButton)
   switchBoolAttribute(pressedButton ,attribute)
 
   SendChangesToServer("ability", id, (attribute.disabled ? "1" : "0"))
+}
+
+void function callEquipmentButtonClick(var pressedButton)
+{
+  int id = int( Hud_GetScriptID( pressedButton ) )
+  BoolAttributte attribute = file.equipment.attributes[ id ];
+  switchBoolAttribute(pressedButton ,attribute)
+
+  SendChangesToServer("equipment", id, (attribute.disabled ? "1" : "0"))
 }
 
 void function callBoostClick(var pressedButton)
@@ -420,7 +440,7 @@ void function callLoadoutButtonClick(var pressedButton)
   LoadoutDisplay loadoutDisplay
   string uiType
 
-  if(file.selected == 1)
+  if(file.selected == UI_WEAPON_INDEX)
   {
     loadoutDisplay = file.weapon
     uiType = "weapon"
@@ -592,6 +612,14 @@ void function reloadPilotScreen()
   }
 }
 
+void function reloadEquipmentScreen()
+{
+  foreach(var button in GetElementsByClassname( file.menu, "EquipmentLoadoutPanelButtonClass" ))
+  {
+    Hud_SetSelected( button , file.equipment.attributes[ int( Hud_GetScriptID(button) ) ].disabled )
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Data import/export
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -600,6 +628,10 @@ void function setAllAttributes(bool enabled)
 {
   //Pilot
   foreach(BoolAttributte attribute in file.pilot.attributes)
+  {
+    attribute.disabled = !enabled
+  }
+  foreach(BoolAttributte attribute in file.equipment.attributes)
   {
     attribute.disabled = !enabled
   }
@@ -638,6 +670,7 @@ void function setAllAttributes(bool enabled)
   }
 
   sendPilotConfig()
+  sendEquipmentConfig()
   sendWeaponConfig()
   sendTitanConfig()
   sendBoostConfig()
@@ -649,6 +682,10 @@ void function exportConfigToString(var pressedButton)
   string exportString = ""
   //Pilot
   foreach(BoolAttributte attribute in file.pilot.attributes)
+  {
+    exportString += attribute.disabled ? "1" : "0"
+  }
+  foreach(BoolAttributte attribute in file.equipment.attributes)
   {
     exportString += attribute.disabled ? "1" : "0"
   }
@@ -695,6 +732,16 @@ int function importPilotUIConfig( array<int> config, int count = 0 )
 {
 
   foreach(BoolAttributte attribute in file.pilot.attributes)
+  {
+    attribute.disabled = (config[count++] == 1) ? true : false
+  }
+  return count
+}
+
+int function importEquipmentUIConfig( array<int> config, int count = 0 )
+{
+
+  foreach(BoolAttributte attribute in file.equipment.attributes)
   {
     attribute.disabled = (config[count++] == 1) ? true : false
   }
@@ -775,11 +822,12 @@ int function importBoostUIConfig( array<int> config, int count = 0 )
 void function importConfigToString(var pressedButton)
 {
   string importString = Hud_GetUTF8Text( Hud_GetChild( file.menu, "ImportExportArea" ) )
-  if(importString.len() != 177) {
+  if(importString.len() != 190) {
     return
   }
   importUIConfig(importString)
   sendPilotConfig()
+  sendEquipmentConfig()
   sendWeaponConfig()
   sendTitanConfig()
   sendBoostConfig()
@@ -787,18 +835,19 @@ void function importConfigToString(var pressedButton)
 
 void function importUIConfig(string input)
 {
-  if(input.len() != 177) {
+  if(input.len() != 190) {
     return
   }
 
   array<int> importArray = parseImportData(input)
   int count = 0
 
-  if(importArray.len() != 177) {
+  if(importArray.len() != 190) {
     return
   }
 
   count = importPilotUIConfig(importArray, count)
+  count = importEquipmentUIConfig(importArray, count)
   count = importWeaponUIConfig(importArray, count)
   count = importTitanUIConfig(importArray, count)
   count = importBoostUIConfig(importArray, count)
@@ -808,12 +857,13 @@ void function importUIConfig(string input)
 
 void function ImportBanConfig(string importString)
 {
-  if(importString.len() != 177) {
+  if(importString.len() != 190) {
     print("BanSystem Config has invalid length")
     return
   }
   importUIConfig(importString)
   sendPilotConfig()
+  sendEquipmentConfig()
   sendWeaponConfig()
   sendTitanConfig()
   sendBoostConfig()
@@ -825,7 +875,7 @@ void function ImportBanConfig(string importString)
 void function initPilot()
 {
   PilotDisplay pilot = file.pilot
-  pilot.loadoutDisplay = file.loadoutDisplays[0]
+  pilot.loadoutDisplay = file.loadoutDisplays[UI_PLAYER_INDEX]
 
   var lableOne = Hud_GetChild( file.pilot.loadoutDisplay, "TacticalName" )
   SetLabelRuiText( lableOne, Localize("#MODE_SETTING_BAN_PILOT_TACTICAL") )
@@ -870,10 +920,47 @@ BoolAttributte function createBoolAttributte( asset image)
     return attribute
 }
 
+void function initEquipment()
+{
+  PilotDisplay equipment = file.equipment
+  equipment.loadoutDisplay = file.loadoutDisplays[UI_EQUIPMENT_INDEX]
+
+  var lableThree = Hud_GetChild( file.equipment.loadoutDisplay, "ExecutionName" )
+  SetLabelRuiText( lableThree, Localize("#MODE_SETTING_BAN_PILOT_EXECUTION") )
+
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_neck_snap"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_inner_pieces"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_grapple"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_straight_blast"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_now_you_see_me"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_amped_wall"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_holopilot"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_pulseblade"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_face_stab"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_backshot"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_combo"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_knockout"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_random"))
+
+  foreach(var button in GetElementsByClassname( file.menu, "EquipmentLoadoutPanelButtonClass" ))
+  {
+    int buttonId = int(Hud_GetScriptID( button ))
+
+    RuiSetImage( Hud_GetRui( button  ), "buttonImage",  equipment.attributes[buttonId].image)
+    AddButtonEventHandler( button, UIE_CLICK, callEquipmentButtonClick )
+  }
+
+
+  var rui = Hud_GetRui( Hud_GetChild( equipment.loadoutDisplay, "EquipmentDetails" ) )
+
+	RuiSetString( rui, "nameText", Localize("#MODE_SETTING_BAN_EQUIPMENT_LBL_TITLE") )
+	RuiSetString( rui, "descText", Localize("#MODE_SETTING_BAN_EQUIPMENT_LBL_TEXT") )
+}
+
 void function initWeapon()
 {
   LoadoutDisplay weapon = file.weapon
-  weapon.loadoutDisplay = file.loadoutDisplays[1]
+  weapon.loadoutDisplay = file.loadoutDisplays[UI_WEAPON_INDEX]
   weapon.displays = GetElementsByClassname( file.menu, "weaponDisplay")
 
   weapon.buttons = GetElementsByClassname( file.menu, "BanWeaponCategoryButton" )
@@ -899,8 +986,9 @@ void function initWeapon()
     "7"]
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  Category ar
-  ar.displayName = "#MENU_TITLE_AR"
+  Category ar1
+  ar1.displayName = "#MENU_TITLE_AR"
+  ar1.prefix = "1. "
 
   ArrayAttribute arVisor
   arVisor.images = [
@@ -916,7 +1004,7 @@ void function initWeapon()
     "2",
     "6"]
 
-  ar.loadouts.append(createWeapon(
+  ar1.loadouts.append(createWeapon(
     "r201",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_r102",
     defaultMod,
@@ -937,33 +1025,41 @@ void function initWeapon()
         "2",
         "6"]
     }
-  ar.loadouts.append(createWeapon(
+  ar1.loadouts.append(createWeapon(
     "r101",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_r101_aog",
     defaultMod,
     defaultMod,
     r101Visor
     ))
-  ar.loadouts.append(createWeapon(
+  ar1.loadouts.append(createWeapon(
     "hemlok",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_hemlok",
     defaultMod,
     defaultMod,
     arVisor))
-  ar.loadouts.append(createWeapon(
+
+  weapon.categories.append(ar1)
+
+  Category ar2
+  ar2.displayName = "#MENU_TITLE_AR"
+  ar2.prefix = "2. "
+
+  ar2.loadouts.append(createWeapon(
     "g2",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_g2a5",
     defaultMod,
     defaultMod,
     arVisor))
-  ar.loadouts.append(createWeapon(
+  ar2.loadouts.append(createWeapon(
     "flatline",
     $"r2_ui/menus/loadout_icons/primary_weapon/primary_vinson",
     defaultMod,
     defaultMod,
     arVisor))
 
-  weapon.categories.append(ar)
+
+  weapon.categories.append(ar2)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Category smg
   smg.displayName = "#MENU_TITLE_SMG"
@@ -1327,7 +1423,7 @@ void function initWeapon()
 
   for(int i = 0; i < weapon.buttons.len() ; i++)
   {
-    RHud_SetText( weapon.buttons[i], Localize(weapon.categories[i].displayName) )
+    RHud_SetText( weapon.buttons[i], weapon.categories[i].prefix + Localize(weapon.categories[i].displayName) )
     AddButtonEventHandler( weapon.buttons[i], UIE_CLICK, changeWeaponDisplay )
 	}
 
@@ -1392,7 +1488,7 @@ void function initTitan()
 {
   LoadoutDisplay titan = file.titan
 
-  titan.loadoutDisplay = file.loadoutDisplays[2]
+  titan.loadoutDisplay = file.loadoutDisplays[UI_TITAN_INDEX]
 
   var lableOne = Hud_GetChild( file.titan.loadoutDisplay, "TitanName" )
   SetLabelRuiText( lableOne, Localize("#MODE_SETTING_BAN_TITAN") )
@@ -1727,7 +1823,7 @@ void function initBoost()
 {
   BoostDisplay boost = file.boost
 
-  boost.loadoutDisplay = file.loadoutDisplays[3]
+  boost.loadoutDisplay = file.loadoutDisplays[UI_BOOST_INDEX]
 
   var lableOne = Hud_GetChild( file.boost.loadoutDisplay, "BoostName" )
   SetLabelRuiText( lableOne, Localize("#MODE_SETTING_BAN_BOOST") )
@@ -1768,6 +1864,7 @@ void function UpdateBanData()
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_0", "") + ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_1", "") + ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_2", "") + ""
+  data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_3", "") + ""
   importUIConfig(data)
 }
 
@@ -1779,6 +1876,19 @@ void function sendPilotConfig()
   {
     BoolAttributte structData = file.pilot.attributes[i]
     dataToSend += " ability|" + i + "|" + (structData.disabled ? "1" : "0")
+  }
+
+  ClientCommand("BanUiUpdateData " + dataToSend)
+}
+
+void function sendEquipmentConfig()
+{
+  string dataToSend = ""
+
+  for(int i = 0; i < file.equipment.attributes.len(); i++)
+  {
+    BoolAttributte structData = file.equipment.attributes[i]
+    dataToSend += " equipment|" + i + "|" + (structData.disabled ? "1" : "0")
   }
 
   ClientCommand("BanUiUpdateData " + dataToSend)

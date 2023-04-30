@@ -1,6 +1,6 @@
 "resource/ui/menus/panels/ban_weapon_category.res"
 {
-	ButtonAssultRifle
+	ButtonAssultRifle1
     	{
         	ControlName				RuiButton
         	InheritProperties		RuiLoadoutSelectionButton
@@ -15,8 +15,7 @@
         	navDown					Button1
         	tabPosition             1
     	}
-
-    ButtonSmg
+	ButtonAssultRifle2
     	{
         	ControlName				RuiButton
         	InheritProperties		RuiLoadoutSelectionButton
@@ -24,7 +23,21 @@
         	ypos                    8
         	scriptID				1
 
-        	pin_to_sibling			ButtonAssultRifle
+        	pin_to_sibling			ButtonAssultRifle1
+       		pin_corner_to_sibling	TOP_LEFT
+        	pin_to_sibling_corner	BOTTOM_LEFT
+        	navUp					Button0
+        	navDown					Button2
+    	}
+    ButtonSmg
+    	{
+        	ControlName				RuiButton
+        	InheritProperties		RuiLoadoutSelectionButton
+			classname				BanWeaponCategoryButton
+        	ypos                    8
+        	scriptID				2
+
+        	pin_to_sibling			ButtonAssultRifle2
        		pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
         	navUp					Button0
@@ -37,7 +50,7 @@
         	InheritProperties		RuiLoadoutSelectionButton
 			classname				BanWeaponCategoryButton
         	ypos                    8
-        	scriptID				2
+        	scriptID				3
 
         	pin_to_sibling			ButtonSmg
         	pin_corner_to_sibling	TOP_LEFT
@@ -52,14 +65,14 @@
         	InheritProperties		RuiLoadoutSelectionButton
 			classname				BanWeaponCategoryButton
         	ypos                    8
-        	scriptID				3
+        	scriptID				4
 
         	pin_to_sibling			ButtonLmg
         	pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
         	navUp					Button1
         	navDown					Button3
-    	} 
+    	}
 
     ButtonShotgun
     	{
@@ -67,29 +80,15 @@
         	InheritProperties		RuiLoadoutSelectionButton
 			classname				BanWeaponCategoryButton
         	ypos                    8
-        	scriptID				4
+        	scriptID				5
 
         	pin_to_sibling			ButtonSniper
         	pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
         	navUp					Button1
         	navDown					Button3
-    	} 
-    ButtonGrenadier 
-    	{
-        	ControlName				RuiButton
-        	InheritProperties		RuiLoadoutSelectionButton
-			classname				BanWeaponCategoryButton
-        	ypos                    8
-        	scriptID				5
-
-        	pin_to_sibling			ButtonShotgun
-        	pin_corner_to_sibling	TOP_LEFT
-        	pin_to_sibling_corner	BOTTOM_LEFT
-        	navUp					Button1
-        	navDown					Button3
-    	} 
-    ButtonPistol 
+    	}
+    ButtonGrenadier
     	{
         	ControlName				RuiButton
         	InheritProperties		RuiLoadoutSelectionButton
@@ -97,27 +96,41 @@
         	ypos                    8
         	scriptID				6
 
-        	pin_to_sibling			ButtonGrenadier
+        	pin_to_sibling			ButtonShotgun
         	pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
         	navUp					Button1
         	navDown					Button3
-    	} 
-    ButtonAntiTitan 
+    	}
+    ButtonPistol
     	{
         	ControlName				RuiButton
         	InheritProperties		RuiLoadoutSelectionButton
 			classname				BanWeaponCategoryButton
         	ypos                    8
         	scriptID				7
-			
+
+        	pin_to_sibling			ButtonGrenadier
+        	pin_corner_to_sibling	TOP_LEFT
+        	pin_to_sibling_corner	BOTTOM_LEFT
+        	navUp					Button1
+        	navDown					Button3
+    	}
+    ButtonAntiTitan
+    	{
+        	ControlName				RuiButton
+        	InheritProperties		RuiLoadoutSelectionButton
+			classname				BanWeaponCategoryButton
+        	ypos                    8
+        	scriptID				8
+
         	pin_to_sibling			ButtonPistol
         	pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
         	navUp					Button1
         	navDown					Button3
     	}
-	
+
 		Weapon0
 	    {
 		    ControlName				CNestedPanel
@@ -148,7 +161,7 @@
 		    visible					1
 		    enabled                 0
 		    controlSettingsFile		"resource/ui/menus/panels/ban_loadout.res"
-	    } 
+	    }
 
 		Weapon2
 	    {
@@ -164,7 +177,7 @@
 		    visible					1
 		    enabled                 0
 		    controlSettingsFile		"resource/ui/menus/panels/ban_loadout.res"
-	    } 
+	    }
 
 		Weapon3
 	    {
@@ -180,7 +193,7 @@
 		    visible					1
 		    enabled                 0
 		    controlSettingsFile		"resource/ui/menus/panels/ban_loadout.res"
-	    } 
+	    }
 
 		Weapon4
 	    {
@@ -205,5 +218,5 @@
 	    xpos					600
     	ypos                    700
 		zpos					10
-    } 
+    }
 }

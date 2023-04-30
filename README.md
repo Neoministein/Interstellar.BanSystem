@@ -8,6 +8,7 @@ This is the repository for the Interstellar.BanSystem Mod for the [R2Northstart 
 
 UI features:
 - You can ban Tacticals, Ordinances, Weapons, Titans and Boosts
+- You can ban Executions
 - You can force Weapon attachments and visor
 - You can force Titan kit 1, 2 and 3
 - You can import / export predefined banned loadouts

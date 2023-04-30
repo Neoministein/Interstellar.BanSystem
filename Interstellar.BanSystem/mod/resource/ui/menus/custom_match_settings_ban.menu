@@ -63,7 +63,7 @@ resource/ui/menus/custom_match_settings_ban.menu
         	//tabPosition             0
     	}
 
-    	WeaponButton
+		EquipmentButton
     	{
         	ControlName				RuiButton
         	InheritProperties		RuiLoadoutSelectionButton
@@ -71,6 +71,22 @@ resource/ui/menus/custom_match_settings_ban.menu
         	ypos                    8
         	scriptID				1
         	pin_to_sibling			PilotButton
+        	pin_corner_to_sibling	TOP_LEFT
+        	pin_to_sibling_corner	BOTTOM_LEFT
+        	navUp					Button1
+        	navDown					Button3
+        	visible					0
+        	//tabPosition             2
+    	}
+
+    	WeaponButton
+    	{
+        	ControlName				RuiButton
+        	InheritProperties		RuiLoadoutSelectionButton
+			classname				BanSettingCategoryButton
+        	ypos                    8
+        	scriptID				2
+        	pin_to_sibling			EquipmentButton
        		pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
         	navUp					Button0
@@ -85,7 +101,7 @@ resource/ui/menus/custom_match_settings_ban.menu
         	InheritProperties		RuiLoadoutSelectionButton
 			classname				BanSettingCategoryButton
         	ypos                    8
-        	scriptID				2
+        	scriptID				3
         	pin_to_sibling			WeaponButton
         	pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
@@ -101,7 +117,7 @@ resource/ui/menus/custom_match_settings_ban.menu
         	InheritProperties		RuiLoadoutSelectionButton
 			classname				BanSettingCategoryButton
         	ypos                    8
-        	scriptID				3
+        	scriptID				4
         	pin_to_sibling			TitanButton
         	pin_corner_to_sibling	TOP_LEFT
         	pin_to_sibling_corner	BOTTOM_LEFT
@@ -113,7 +129,6 @@ resource/ui/menus/custom_match_settings_ban.menu
 
 
 
-	
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -131,7 +146,19 @@ resource/ui/menus/custom_match_settings_ban.menu
 		    controlSettingsFile		"resource/ui/menus/panels/ban_pilotloadout.res"
 	    }
 
-
+		EquipmentLoadoutDisplay
+	    {
+		    ControlName				CNestedPanel
+			classname 				loadoutDisplay
+		    xpos					450
+    	    ypos                    76
+		    zpos					10
+			wide					1048
+			tall					1080
+		    visible					0
+		    enabled                 0
+		    controlSettingsFile		"resource/ui/menus/panels/ban_equipmentloadout.res"
+	    }
 
 		WeaponCategoryDisplay
 	    {
@@ -219,9 +246,9 @@ resource/ui/menus/custom_match_settings_ban.menu
 				ypos                    980
 				zpos					100
 				wide					100
-				
+
 				visible					1
-		}	
+		}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -229,7 +256,7 @@ resource/ui/menus/custom_match_settings_ban.menu
 		{
 			ControlName				CNestedPanel
 			InheritProperties       FooterButtons
-			
+
         	visible					1
 			enabled                 1
 		}

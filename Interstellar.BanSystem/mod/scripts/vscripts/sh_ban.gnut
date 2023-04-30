@@ -7,6 +7,7 @@ global function getTitanBanData
 global function getAbilityBanData
 global function getGrenadeBanData
 global function getBoostBanData
+global function getExecutionBanData
 
 global function createUniversalBanStruct
 global function createWeaponBanStruct
@@ -51,6 +52,7 @@ struct {
  array<WeaponBanStruct> weaponArray
  array<UniversalBanStruct> grenadeArray
  array<UniversalBanStruct> abilityArray
+ array<UniversalBanStruct> executionArray
  array<BoostBanStruct> boostArray
  array<TitanBanStruct> titanArray
  array<string> admins
@@ -92,18 +94,20 @@ void function ImportData()
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_0", "") + ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_1", "") + ""
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_2", "") + ""
+	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_3", "") + ""
 
 	array< string > importArray = parseImportData( data )
-	if(importArray.len() != 177)
+	if(importArray.len() != 190)
 	{
 		string cVar = GetConVarString( "ban_config" )
     		importArray = parseImportData( cVar )
-		if(importArray.len() == 177)
+		if(importArray.len() == 190)
 		{
 			if(IsLobby()) {
 				SetPlaylistVarOverride("BAN_DATA_0", cVar.slice(0,60))
 				SetPlaylistVarOverride("BAN_DATA_1", cVar.slice(60,120))
-				SetPlaylistVarOverride("BAN_DATA_2", cVar.slice(120))
+				SetPlaylistVarOverride("BAN_DATA_2", cVar.slice(120,180))
+				SetPlaylistVarOverride("BAN_DATA_3", cVar.slice(180))
 			}
 		}
 		else
@@ -116,6 +120,11 @@ void function ImportData()
 	for( int i = 0; i < file.abilityArray.len() + file.grenadeArray.len(); i++ )
 	{
 		UpdateAbility( i, importArray[currentIndex++] )
+	}
+
+	for( int i = 0; i < file.executionArray.len(); i++ )
+	{
+		UpdateEquipment( i, importArray[currentIndex++] )
 	}
 
 	for( int i = 0; i < file.weaponArray.len(); i++ )
@@ -151,6 +160,10 @@ void function ImportData()
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
 	foreach (UniversalBanStruct banStruct in file.grenadeArray )
+	{
+		dataToStore += banStruct.disabled ? "1" : "0"
+	}
+	foreach (UniversalBanStruct banStruct in file.executionArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
@@ -217,7 +230,9 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 			case "boost":
 				UpdateBoost(int(data[1]), data[2])
 				break
-
+			case "equipment":
+				UpdateEquipment(int(data[1]), data[2])
+				break
 		}
 	}
 
@@ -227,6 +242,10 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
 	foreach (UniversalBanStruct banStruct in file.grenadeArray )
+	{
+		dataToStore += banStruct.disabled ? "1" : "0"
+	}
+	foreach (UniversalBanStruct banStruct in file.executionArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
@@ -245,7 +264,8 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 	if(IsLobby()) {
 		SetPlaylistVarOverride("BAN_DATA_0", dataToStore.slice(0,60))
 		SetPlaylistVarOverride("BAN_DATA_1", dataToStore.slice(60,120))
-		SetPlaylistVarOverride("BAN_DATA_2", dataToStore.slice(120))
+		SetPlaylistVarOverride("BAN_DATA_2", dataToStore.slice(120,180))
+		SetPlaylistVarOverride("BAN_DATA_3", dataToStore.slice(180))
 	}
 
 
@@ -275,24 +295,27 @@ void function UpdateWeaponFromCategory(int category, int index, string data)
 			UpdateWeapon(index, data)
 			break
 		case 1:
-			UpdateWeapon(index + 5, data)
+			UpdateWeapon(index + 3, data)
 			break
 		case 2:
-			UpdateWeapon(index + 9, data)
+			UpdateWeapon(index + 5, data)
 			break
 		case 3:
-			UpdateWeapon(index + 12, data)
+			UpdateWeapon(index + 9, data)
 			break
 		case 4:
-			UpdateWeapon(index + 15, data)
+			UpdateWeapon(index + 12, data)
 			break
 		case 5:
-			UpdateWeapon(index + 17, data)
+			UpdateWeapon(index + 15, data)
 			break
 		case 6:
-			UpdateWeapon(index + 21, data)
+			UpdateWeapon(index + 17, data)
 			break
 		case 7:
+			UpdateWeapon(index + 21, data)
+			break
+		case 8:
 			UpdateWeapon(index + 26, data)
 			break
 	}
@@ -316,6 +339,11 @@ void function UpdateTitanFromCategory(int category, int index, string data)
 void function UpdateBoost(int index, string data)
 {
 	file.boostArray[index].disabled = (data == "1") ? true : false
+}
+
+void function UpdateEquipment(int index, string data)
+{
+	file.executionArray[index].disabled = (data == "1") ? true : false
 }
 
 void function UpdateWeapon(int index, string data)
@@ -911,6 +939,11 @@ array<TitanBanStruct> function getTitanBanData()
 	return file.titanArray
 }
 
+array<UniversalBanStruct> function getExecutionBanData()
+{
+	return file.executionArray
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///Setup data
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -999,6 +1032,26 @@ void function InitData()
 
 	file.titanArray.append(createTitanBanStruct("scorch"))
 	file.titanArray.append(createTitanBanStruct("legion"))
+
+
+	file.executionArray.append(createUniversalBanStruct("execution_neck_snap"))
+	file.executionArray.append(createUniversalBanStruct("execution_telefrag"))
+	file.executionArray.append(createUniversalBanStruct("execution_grapple"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_stim"))
+	file.executionArray.append(createUniversalBanStruct("execution_cloak"))
+	file.executionArray.append(createUniversalBanStruct("execution_ampedwall"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_holopilot"))
+	file.executionArray.append(createUniversalBanStruct("execution_pulseblade"))
+	file.executionArray.append(createUniversalBanStruct("execution_face_stab"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_backshot"))
+	file.executionArray.append(createUniversalBanStruct("execution_combo"))
+	file.executionArray.append(createUniversalBanStruct("execution_knockout"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_random"))
+
 }
 
 UniversalBanStruct function createUniversalBanStruct(string name)
