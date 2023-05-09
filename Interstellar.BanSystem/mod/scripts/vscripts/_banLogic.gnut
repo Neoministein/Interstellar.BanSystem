@@ -2,6 +2,7 @@ untyped
 global function BanLogic_Init
 global function  CheckTitanForBanLogic
 
+const NOTHING_AVAILABLE = "NULL"
 
 void function BanLogic_Init()
 {
@@ -13,9 +14,11 @@ void function BanLogic_Init()
 	SetLoadoutGracePeriodEnabled( false )
 	AddCallback_IsValidMeleeExecutionTarget( IsExecutionAllowed )
 	AddCallback_GameStateEnter( eGameState.Playing, OnGameStartePlay )
-	//AddCallback_OnClientConnecting()
 
-	CreateNewHudMessageLoadout("Interstellar.BanMod",[1,0],[74,153,255],5,"Your kit is using banned weapons:\n")
+	AddCallback_OnPilotBecomesTitan( CheckMeleeTitan )
+    AddCallback_OnTitanBecomesPilot( CheckMeleePilot )
+
+	CreateNewHudMessageLoadout("Interstellar.BanMod",[1,0],[74,153,255],8,"Your kit is using banned weapons:\n")
 }
 
 bool function IsExecutionAllowed(entity attacker, entity target)
@@ -24,7 +27,34 @@ bool function IsExecutionAllowed(entity attacker, entity target)
 		return true
 	}
 
-	return GetFirstAvailableExecution().name == "Null" ? false : true
+	return GetFirstAvailableExecution().name == NOTHING_AVAILABLE ? false : true
+}
+
+void function CheckMeleeTitan(entity player, entity titan )
+{
+	if(getMeleeBanData()[1].disabled)
+	{
+		AddHudMessage(GetLoadoutByName("Interstellar.BanMod"),"Titan Melee removed", 0, player)
+		Melee_Disable(player)
+
+	}
+	else
+	{
+		Melee_Enable( player )
+	}
+}
+void function CheckMeleePilot(entity player, entity titan )
+{
+	if(getMeleeBanData()[0].disabled)
+	{
+		Melee_Disable(player)
+		AddHudMessage(GetLoadoutByName("Interstellar.BanMod"),"Pilot Melee removed", 0, player)
+	}
+
+	else
+	{
+		Melee_Enable( player )
+	}
 }
 
 void function EditExecution(PilotLoadoutDef modifiedLoadout)
@@ -45,7 +75,7 @@ void function EditExecution(PilotLoadoutDef modifiedLoadout)
 		{
 			UniversalBanStruct NewExecutionStruct = GetRandomAvailableExecution()
 
-			if(NewExecutionStruct.name != "Null" )
+			if(NewExecutionStruct.name != NOTHING_AVAILABLE )
 			{
 				modifiedLoadout.execution = NewExecutionStruct.name
 			}
@@ -57,7 +87,7 @@ void function EditExecution(PilotLoadoutDef modifiedLoadout)
 			if(execution.disabled) {
 				UniversalBanStruct NewExecutionStruct = GetFirstAvailableExecution()
 
-				if(NewExecutionStruct.name != "Null" )
+				if(NewExecutionStruct.name != NOTHING_AVAILABLE )
 				{
 			 		modifiedLoadout.execution = NewExecutionStruct.name
 				}
@@ -95,7 +125,7 @@ void function BoostEarning_TitanEarned( entity player )
 {
 	HudMessageLoadout banHudLoadout = GetLoadoutByName("Interstellar.BanMod")
 
-	if( GetFirstAvailableBoost().name != "Null" ) //check if boosts are disabled
+	if( GetFirstAvailableBoost().name != NOTHING_AVAILABLE ) //check if boosts are disabled
 	{
 
 		BoostBanStruct currentBoost = GetBoostStructById(player.GetPersistentVar("burnmeterSlot"))
@@ -125,7 +155,7 @@ void function BoostEarning_TitanEarned( entity player )
 
 void function TitanEarning_TitanEarned( entity player )
 {
-    if ( GetFirstAvailableTitan().name != "Null") //Check if all titans are banned
+    if ( GetFirstAvailableTitan().name != NOTHING_AVAILABLE) //Check if all titans are banned
         SetTitanAvailable( player )
 	else
     {
@@ -139,6 +169,18 @@ void function TitanEarning_TitanEarned( entity player )
 
 void function BanLogicInGame(entity player)
 {
+	player.PlayerMelee_SetState( PLAYER_MELEE_STATE_NONE )
+
+	if(getMeleeBanData()[0].disabled)
+	{
+		Melee_Disable(player)
+		AddHudMessage(GetLoadoutByName("Interstellar.BanMod"),"Pilot Melee removed", 0, player)
+	}
+	else
+	{
+		Melee_Enable( player )
+	}
+
 	bool shouldChangeLoadout = false
 	// create loadout struct
 	PilotLoadoutDef modifiedLoadout = clone GetActivePilotLoadout( player )
@@ -168,12 +210,12 @@ void function BanLogicInGame(entity player)
 
 			WeaponBanStruct newWeapon = GetFirstAvailablePrimaryWeapon()
 
-			if (newWeapon.name != "Null" )
+			if (newWeapon.name != NOTHING_AVAILABLE )
 			{
 				modifiedLoadout.primary = newWeapon.name
 
 
-				AddHudMessage(banHudLoadout,"Primary changed to: " + newWeapon.name, 0, player)
+				AddHudMessage(banHudLoadout,"Primary changed to: " + newWeapon.displayName, 0, player)
 
 				// if mod1 is forced && mod 2 is free and its the same as forced mod1 it crashes so making sure that this wont happen
 				if( newWeapon.mod1 != "UNDEFINED" && modifiedLoadout.primaryMods[1]  != newWeapon.mod1)
@@ -200,7 +242,7 @@ void function BanLogicInGame(entity player)
 				shouldRemovePrim = true
 				AddHudMessage(banHudLoadout,"Primary removed", 0, player)
 			}
-		}
+	}
 			//check Secondary Slot
 			else if(modifiedLoadout.secondary == weapon.name && weapon.disabled)
 			{
@@ -220,10 +262,10 @@ void function BanLogicInGame(entity player)
 			       newWeapon = GetFirstAvailableSecWeapon()
 				}
 
-				if (newWeapon.name != "Null" )
+				if (newWeapon.name != NOTHING_AVAILABLE )
 				{
 					modifiedLoadout.secondary = newWeapon.name
-					AddHudMessage(banHudLoadout,"Secondary changed to: " + newWeapon.name, 0, player)
+					AddHudMessage(banHudLoadout,"Secondary changed to: " + newWeapon.displayName, 0, player)
 
 					if( weapon.mod1 != "UNDEFINED")
 					{
@@ -258,11 +300,11 @@ void function BanLogicInGame(entity player)
 			       newWeapon = GetFirstAvailableSecWeapon()
 				}
 
-				if (newWeapon.name != "Null" )
+				if (newWeapon.name != NOTHING_AVAILABLE )
 				{
 					modifiedLoadout.weapon3 = newWeapon.name
 
-					AddHudMessage(banHudLoadout,"Weapon 3 changed to: " + newWeapon.name, 0, player)
+					AddHudMessage(banHudLoadout,"Weapon 3 changed to: " + newWeapon.displayName, 0, player)
 
 					if( newWeapon.mod1 != "UNDEFINED")
 					{
@@ -281,7 +323,7 @@ void function BanLogicInGame(entity player)
 				}
 			}
 			//Weapon mods
-			if(modifiedLoadout.primary == weapon.name && (weapon.mod1 != "UNDEFINED" || weapon.mod2 != "UNDEFINED" ))
+			if(modifiedLoadout.primary == weapon.name )
 			{
 				if(weapon.mod1 != "UNDEFINED")
 				{
@@ -331,10 +373,10 @@ void function BanLogicInGame(entity player)
 				{
 					UniversalBanStruct newUniversalBanStruct = GetFirstAvailableGrenade()
 
-					if(newUniversalBanStruct.name != "Null")
+					if(newUniversalBanStruct.name != NOTHING_AVAILABLE)
 					{
 				    	modifiedLoadout.ordnance = newUniversalBanStruct.name
-						AddHudMessage(banHudLoadout,"Ordnance changed to: " + newUniversalBanStruct.name, 0, player)
+						AddHudMessage(banHudLoadout,"Ordnance changed to: " + newUniversalBanStruct.displayName, 0, player)
 					}
 					else
 					{
@@ -355,10 +397,10 @@ void function BanLogicInGame(entity player)
 				if(ability.disabled) {
 					UniversalBanStruct NewAbilityStruct = GetFirstAvailableAbility()
 
-					if(NewAbilityStruct.name != "Null" )
+					if(NewAbilityStruct.name != NOTHING_AVAILABLE )
 					{
 				 		modifiedLoadout.special = NewAbilityStruct.name
-						AddHudMessage(banHudLoadout,"Ability changed to: "+ NewAbilityStruct.name, 0, player)
+						AddHudMessage(banHudLoadout,"Ability changed to: "+ NewAbilityStruct.displayName, 0, player)
 					}
 					else
 					{
@@ -377,9 +419,9 @@ void function BanLogicInGame(entity player)
 		{
 			BoostBanStruct newBoost = GetFirstAvailableBoost()
 
-			if(newBoost.name != "Null")
+			if(newBoost.name != NOTHING_AVAILABLE)
 			{
-				AddHudMessage(banHudLoadout,"Boost changed to: "+ newBoost.name, 0, player)
+				AddHudMessage(banHudLoadout,"Boost changed to: "+ newBoost.displayName, 0, player)
 			}
 			else
 			{
@@ -396,19 +438,67 @@ void function BanLogicInGame(entity player)
 				if(execution.disabled) {
 					UniversalBanStruct NewExecutionStruct = GetFirstAvailableExecution()
 
-					if(NewExecutionStruct.name != "Null" )
+					if(NewExecutionStruct.name != NOTHING_AVAILABLE )
 					{
-						AddHudMessage(banHudLoadout,"execution changed to: " + NewExecutionStruct.name, 0, player)
+						AddHudMessage(banHudLoadout,"execution changed to: " + NewExecutionStruct.displayName, 0, player)
 					}
 				}
 				break
 			}
 		}
 
+		// kit
+		for(int i = 0; i < getKitBanData().len(); i++)
+		{
+			UniversalBanStruct kit =  getKitBanData()[i]
+			if(kit.name == modifiedLoadout.passive1)
+			{
+				if(kit.disabled)
+				{
+					shouldChangeLoadout = true
+
+					UniversalBanStruct NewKitStruct = GetFirstAvailableKit1()
+
+					if(NewKitStruct.name != NOTHING_AVAILABLE )
+					{
+						modifiedLoadout.passive1 = NewKitStruct.name
+						AddHudMessage(banHudLoadout,"Kit1 changed to: " + NewKitStruct.displayName, 0, player)
+					}
+					else
+					{
+						modifiedLoadout.passive1 = ""
+						AddHudMessage(banHudLoadout,"Kit1 Removed ", 0, player)
+					}
+				}
+			}
+			else if(kit.name == modifiedLoadout.passive2)
+			{
+				if(kit.disabled)
+				{
+					shouldChangeLoadout = true
+
+
+					UniversalBanStruct NewKitStruct = GetFirstAvailableKit2()
+
+					if(NewKitStruct.name != NOTHING_AVAILABLE )
+					{
+						modifiedLoadout.passive2 = NewKitStruct.name
+
+						AddHudMessage(banHudLoadout,"Kit2 changed to: " + NewKitStruct.displayName, 0, player)
+					}
+					else
+					{
+						modifiedLoadout.passive2 = ""
+						AddHudMessage(banHudLoadout,"Kit2 Removed ", 0, player)
+					}
+				}
+			}
+		}
 
 	// dont wanna give a new loadout if it's not necessary, could break other callbacks
 	if ( shouldChangeLoadout )
 	{
+		modifiedLoadout.setFileMods = GetSetFileModsForSettingType( "pilot", [ modifiedLoadout.passive1, modifiedLoadout.passive2 ] )
 		GivePilotLoadout( player, modifiedLoadout )
 	}
 
@@ -427,19 +517,58 @@ void function BanLogicInGame(entity player)
 		player.TakeWeapon(modifiedLoadout.weapon3)
 	}
 
-	if(shouldRemovePrim &&  shouldRemoveSec && shouldRemoveWeapon3)
+	if(shouldRemoveGrenade)
 	{
-		player.GiveWeapon( "mp_weapon_rocket_launcher")
-		player.SetActiveWeaponByName( "mp_weapon_rocket_launcher" )
+		player.TakeOffhandWeapon( OFFHAND_ORDNANCE )
 	}
 
-	if(shouldRemoveGrenade)
-		player.TakeOffhandWeapon( OFFHAND_ORDNANCE )
 
 	if(shouldRemoveAbility)
 		player.TakeOffhandWeapon( OFFHAND_SPECIAL )
 
+
+	if(shouldRemovePrim &&  shouldRemoveSec && shouldRemoveWeapon3)
+	{
+		foreach ( entity weapon in player.GetMainWeapons() )
+		{
+			player.TakeWeaponNow( weapon.GetWeaponClassName() )
+		}
+
+		foreach ( entity weapon in player.GetOffhandWeapons() )
+		{
+			player.TakeWeaponNow(weapon.GetWeaponClassName())
+		}
+
+		if(!shouldRemoveGrenade)
+		{
+			player.GiveOffhandWeapon(modifiedLoadout.ordnance,OFFHAND_ORDNANCE,modifiedLoadout.ordnanceMods)
+		}
+		if(!shouldRemoveAbility)
+		{
+			player.GiveOffhandWeapon(modifiedLoadout.special,OFFHAND_SPECIAL,modifiedLoadout.specialMods)
+		}
+
+		if(getMeleeBanData()[0].disabled)
+		{
+			player.GiveWeapon( "mp_weapon_rocket_launcher" )
+			player.SetActiveWeaponByName( "mp_weapon_rocket_launcher" )
+		}
+		else
+		{
+			player.GiveOffhandWeapon( "melee_pilot_emptyhanded", OFFHAND_MELEE, [ "allow_as_primary" ] )
+			player.SetActiveWeaponByName( "melee_pilot_emptyhanded" )
+		}
+
+		foreach ( entity weapon in player.GetMainWeapons() )
+		{
+			if("mp_weapon_r97" == weapon.GetWeaponClassName())
+			{
+				weapon.SetWeaponPrimaryClipCountAbsolute( 0 )
+			}
+		}
+	}
 }
+
 
 WeaponBanStruct function GetFirstAvailablePrimaryWeapon()
 {
@@ -455,7 +584,7 @@ WeaponBanStruct function GetFirstAvailablePrimaryWeapon()
 		}
 	}
 
-	return createWeaponBanStruct("Null")
+	return createWeaponBanStruct(NOTHING_AVAILABLE)
 }
 
 
@@ -472,7 +601,7 @@ WeaponBanStruct function GetFirstAvailableSecWeapon()
 		}
 	}
 
-	return createWeaponBanStruct("Null")
+	return createWeaponBanStruct(NOTHING_AVAILABLE)
 }
 
 WeaponBanStruct function GetFirstAvailableAtWeapon()
@@ -488,7 +617,7 @@ WeaponBanStruct function GetFirstAvailableAtWeapon()
 		}
 	}
 
-	return createWeaponBanStruct("Null")
+	return createWeaponBanStruct(NOTHING_AVAILABLE)
 }
 
 UniversalBanStruct function GetFirstAvailableGrenade()
@@ -502,7 +631,7 @@ UniversalBanStruct function GetFirstAvailableGrenade()
 		}
 	}
 
-	return createUniversalBanStruct("Null")
+	return createUniversalBanStruct(NOTHING_AVAILABLE)
 }
 
 UniversalBanStruct function GetFirstAvailableAbility()
@@ -516,7 +645,7 @@ UniversalBanStruct function GetFirstAvailableAbility()
 		}
 	}
 
-	return createUniversalBanStruct("Null")
+	return createUniversalBanStruct(NOTHING_AVAILABLE)
 }
 
 UniversalBanStruct function GetFirstAvailableExecution()
@@ -531,7 +660,7 @@ UniversalBanStruct function GetFirstAvailableExecution()
 		}
 	}
 
-	return createUniversalBanStruct("Null")
+	return createUniversalBanStruct(NOTHING_AVAILABLE)
 }
 
 UniversalBanStruct function GetRandomAvailableExecution()
@@ -550,6 +679,33 @@ UniversalBanStruct function GetRandomAvailableExecution()
 	return GetFirstAvailableExecution()
 }
 
+UniversalBanStruct function GetFirstAvailableKit1()
+{
+	for(int i = 0; i < 4 ; i++)
+	{
+		UniversalBanStruct CurrentCheckingKit = getKitBanData()[i]
+		if(CurrentCheckingKit.disabled == false)
+		{
+			return CurrentCheckingKit
+		}
+	}
+
+	return createUniversalBanStruct(NOTHING_AVAILABLE)
+}
+UniversalBanStruct function GetFirstAvailableKit2()
+{
+	for(int i = 4; i < getKitBanData().len() ; i++)
+	{
+		UniversalBanStruct CurrentCheckingKit = getKitBanData()[i]
+		if(CurrentCheckingKit.disabled == false)
+		{
+			return CurrentCheckingKit
+		}
+	}
+
+	return createUniversalBanStruct(NOTHING_AVAILABLE)
+}
+
 BoostBanStruct function GetFirstAvailableBoost()
 {
 	for(int i = 0; i < getBoostBanData().len(); i++)
@@ -561,7 +717,7 @@ BoostBanStruct function GetFirstAvailableBoost()
 			return CurrentCheckingBoost
 		}
 	}
-	return createBoostBanStruct("Null", 0,0)
+	return createBoostBanStruct(NOTHING_AVAILABLE, 0,0)
 }
 
 TitanBanStruct function GetFirstAvailableTitan()
@@ -575,34 +731,31 @@ TitanBanStruct function GetFirstAvailableTitan()
 			return CurrentCheckingTitan
 		}
 	}
-	return createTitanBanStruct("Null")
+	return createTitanBanStruct(NOTHING_AVAILABLE)
 }
+
 
 void function CheckTitanForBanLogic(entity player,TitanLoadoutDef currentTitanLoadout)
 {
-
-
 	int titanLoadoutIndex
 	TitanBanStruct	titanStruct
 	HudMessageLoadout banHudLoadout = GetLoadoutByName("Interstellar.BanMod")
+
 
 	// if titan is banned get an unbaned titan and get all the skins for it
 	if(GetTitanStructByName(currentTitanLoadout.titanClass).disabled)
 	{
 		titanStruct  = GetFirstAvailableTitan()
 
-
-		if(titanStruct.name == "Null")
+		if(titanStruct.name == NOTHING_AVAILABLE)
 		{
 
 			return
 		}
 
-
 		titanLoadoutIndex = GetTitanLoadoutIndexByName(titanStruct.name)
 
-		AddHudMessage(banHudLoadout,"Titan changet to  "+ titanStruct.name, 0, player)
-
+		AddHudMessage(banHudLoadout,"Titan changet to  "+ titanStruct.displayName, 0, player)
 
 
 		currentTitanLoadout.titanClass = titanStruct.name
@@ -639,46 +792,46 @@ void function CheckTitanForBanLogic(entity player,TitanLoadoutDef currentTitanLo
 		titanStruct = GetTitanStructByName(currentTitanLoadout.titanClass)
 	}
 
-	if(titanStruct.passive1 != "UNDEFINED")
+	if(titanStruct.passive1.name != UNDEFINED)
 	{
-		currentTitanLoadout.passive1 =  titanStruct.passive1
-		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive1 , 0, player)
+		currentTitanLoadout.passive1 =  titanStruct.passive1.name
+		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive1.displayName , 0, player)
 	}
 
-	if(titanStruct.passive2 != "UNDEFINED")
+	if(titanStruct.passive2.name != UNDEFINED)
 	{
-		currentTitanLoadout.passive2 =  titanStruct.passive2
-		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive2 , 0, player)
+		currentTitanLoadout.passive2 =  titanStruct.passive2.name
+		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive2.displayName , 0, player)
 	}
 
-	if(titanStruct.passive3 != "UNDEFINED")
+	if(titanStruct.passive3.name != UNDEFINED)
 	{
-		currentTitanLoadout.passive3 =  titanStruct.passive3
-		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive3 , 0, player)
+		currentTitanLoadout.passive3 =  titanStruct.passive3.name
+		AddHudMessage(banHudLoadout,"Titan passive: "+ titanStruct.passive3.displayName , 0, player)
 	}
 
 	if( titanStruct.name == "vanguard" )
 	{
 		titanStruct = GetTitanStructByName("vanguardCores")
 
-		if(titanStruct.passive1 != "UNDEFINED")
+		if(titanStruct.passive1.name != UNDEFINED)
 		{
-			currentTitanLoadout.passive4 =  titanStruct.passive1
-			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive1 , 0, player)
+			currentTitanLoadout.passive4 =  titanStruct.passive1.name
+			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive1.displayName , 0, player)
 		}
 
-		if(titanStruct.passive2 != "UNDEFINED")
+		if(titanStruct.passive2.name != UNDEFINED)
 		{
 
-			currentTitanLoadout.passive5 =  titanStruct.passive2
-			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive2 , 0, player)
+			currentTitanLoadout.passive5 =  titanStruct.passive2.name
+			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive2.displayName , 0, player)
 		}
 
 
-		if(titanStruct.passive3 != "UNDEFINED")
+		if(titanStruct.passive3.name != UNDEFINED)
 		{
-			currentTitanLoadout.passive6 =  titanStruct.passive3
-			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive3 , 0, player)
+			currentTitanLoadout.passive6 =  titanStruct.passive3.name
+			AddHudMessage(banHudLoadout,"Titan core: "+ titanStruct.passive3.displayName , 0, player)
 		}
 	}
 	else
@@ -781,4 +934,41 @@ EarnObject function EarnObject_GetById( int id )
 	Assert( false, "Invalid earn object id " + id )
 	EarnObject earnObject
 	return earnObject
+}
+
+string function GetTitanPassiveDisplayNameByCodeName(string str)
+{
+	switch(str)
+	{
+
+		case "pas_enhanced_titan_ai":
+			return "Assault Chip"
+		case "pas_auto_eject":
+			return "Stealth Auto-Eject"
+		case "pas_mobility_dash_capacity":
+			return "Turbo Engine"
+		case "pas_hyper_core":
+			return "Overcore"
+		case "pas_build_up_nuclear_core":
+			return "Nuclear Ejection"
+		case "pas_anti_rodeo":
+			return "Counter Ready"
+		case "pas_bubbleshield":
+			return "Dome Shield"
+		case "pas_warpfall":
+			return "Warpfall"
+
+		// ION Specific
+		case "pas_ion_weapon":
+				return ""
+		case "pas_ion_tripwire":
+				return "2"
+		case "pas_ion_vortex":
+				return "3"
+		case "pas_ion_lasercannon":
+				return "4"
+		case "pas_ion_weapon_ads":
+				return "5"
+	}
+	return str
 }

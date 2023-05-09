@@ -9,6 +9,8 @@ const UI_WEAPON_INDEX = 2
 const UI_TITAN_INDEX = 3
 const UI_BOOST_INDEX = 4
 
+const NR_OF_BANABLE_ELEMENTS = 201
+
 struct BoolAttributte {
   bool disabled = false
   asset image
@@ -822,7 +824,7 @@ int function importBoostUIConfig( array<int> config, int count = 0 )
 void function importConfigToString(var pressedButton)
 {
   string importString = Hud_GetUTF8Text( Hud_GetChild( file.menu, "ImportExportArea" ) )
-  if(importString.len() != 190) {
+  if(importString.len() != NR_OF_BANABLE_ELEMENTS) {
     return
   }
   importUIConfig(importString)
@@ -835,14 +837,14 @@ void function importConfigToString(var pressedButton)
 
 void function importUIConfig(string input)
 {
-  if(input.len() != 190) {
+  if(input.len() != NR_OF_BANABLE_ELEMENTS) {
     return
   }
 
   array<int> importArray = parseImportData(input)
   int count = 0
 
-  if(importArray.len() != 190) {
+  if(importArray.len() != NR_OF_BANABLE_ELEMENTS) {
     return
   }
 
@@ -857,7 +859,7 @@ void function importUIConfig(string input)
 
 void function ImportBanConfig(string importString)
 {
-  if(importString.len() != 190) {
+  if(importString.len() != NR_OF_BANABLE_ELEMENTS) {
     print("BanSystem Config has invalid length")
     return
   }
@@ -925,8 +927,17 @@ void function initEquipment()
   PilotDisplay equipment = file.equipment
   equipment.loadoutDisplay = file.loadoutDisplays[UI_EQUIPMENT_INDEX]
 
-  var lableThree = Hud_GetChild( file.equipment.loadoutDisplay, "ExecutionName" )
-  SetLabelRuiText( lableThree, Localize("#MODE_SETTING_BAN_PILOT_EXECUTION") )
+  var lableOne = Hud_GetChild( file.equipment.loadoutDisplay, "ExecutionName" )
+  SetLabelRuiText( lableOne, Localize("#MODE_SETTING_BAN_PILOT_EXECUTION") )
+
+  var lableTwo = Hud_GetChild( file.equipment.loadoutDisplay, "Kit1Name" )
+  SetLabelRuiText( lableTwo, Localize("#MODE_SETTING_BAN_PILOT_KIT_1") )
+
+  var lableThree = Hud_GetChild( file.equipment.loadoutDisplay, "Kit2Name" )
+  SetLabelRuiText( lableThree, Localize("#MODE_SETTING_BAN_PILOT_KIT_2") )
+
+  var lableFour = Hud_GetChild( file.equipment.loadoutDisplay, "MeleeName" )
+  SetLabelRuiText( lableFour, Localize("#MODE_SETTING_BAN_PILOT_MELEE") )
 
   equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_neck_snap"))
   equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_inner_pieces"))
@@ -942,13 +953,37 @@ void function initEquipment()
   equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_knockout"))
   equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/execution/execution_random"))
 
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/power_cell_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/quick_regen_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/ordnance_expert_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/phase_embark_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/kill_report_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/wall_hang_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/hover_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/stealth_movement_menu"))
+  equipment.attributes.append(createBoolAttributte($"rui/pilot_loadout/kit/titan_hunter_menu"))
+
+  equipment.attributes.append(createBoolAttributte($"rui/gencard_icons/dlc5/gc_icon_pilot_circle"))
+  equipment.attributes.append(createBoolAttributte($"rui/gencard_icons/dlc5/gc_icon_tri_chevron"))
+
+
+  int frameCount = 0;
   foreach(var button in GetElementsByClassname( file.menu, "EquipmentLoadoutPanelButtonClass" ))
   {
     int buttonId = int(Hud_GetScriptID( button ))
+    if(buttonId == 22 || buttonId == 23) {
+      var buttonFrame = Hud_GetChild( file.equipment.loadoutDisplay, "ButtonFrame" + frameCount++ )
+      RuiSetImage( Hud_GetRui( buttonFrame  ), "basicImage",  equipment.attributes[buttonId].image)
+    } else {
+      RuiSetImage( Hud_GetRui( button  ), "buttonImage",  equipment.attributes[buttonId].image)
+    }
 
-    RuiSetImage( Hud_GetRui( button  ), "buttonImage",  equipment.attributes[buttonId].image)
     AddButtonEventHandler( button, UIE_CLICK, callEquipmentButtonClick )
+
   }
+
+
+
 
 
   var rui = Hud_GetRui( Hud_GetChild( equipment.loadoutDisplay, "EquipmentDetails" ) )

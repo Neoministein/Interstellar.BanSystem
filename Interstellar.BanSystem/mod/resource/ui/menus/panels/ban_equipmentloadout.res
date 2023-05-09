@@ -7,7 +7,7 @@
         ypos                    78
 	}
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     ButtonNeckSnap
     {
@@ -247,7 +247,265 @@
         pin_corner_to_sibling	TOP_LEFT
         pin_to_sibling_corner	BOTTOM_LEFT
     }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    Kit1Name
+	{
+        ControlName				RuiPanel
+        InheritProperties       RuiLoadoutLabel
+        ypos                    78
+        xpos					450
+	}
+
+    Kit2Name
+	{
+        ControlName				RuiPanel
+        InheritProperties       RuiLoadoutLabel
+        xpos					-235
+
+        pin_to_sibling			Kit1Name
+	}
+
+    ButtonPowerCell
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				13
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			Kit1Name
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonFastRegen
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				14
+        xpos					-105
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			Kit1Name
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonTactikill
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				17
+        xpos					-235
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			Kit1Name
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonWallhang
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				18
+        xpos					-340
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			Kit1Name
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ButtonExplosivExpert
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				15
+        ypos					10
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			ButtonPowerCell
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonPhaseEmbark
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				16
+        ypos					10
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			ButtonFastRegen
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonHover
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				19
+        ypos					10
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			ButtonTactikill
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonSealth
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				20
+        ypos					10
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			ButtonWallhang
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ButtonTitanHunter
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				21
+        ypos					10
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			ButtonHover
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    MeleeName
+	{
+        ControlName				RuiPanel
+        InheritProperties       RuiLoadoutLabel
+        ypos                    78
+        xpos					925
+	}
+
+    ButtonPilotMelee
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				22
+        zpos					10
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			MeleeName
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonFrame0
+	{
+		ControlName				RuiPanel
+		wide					90
+		tall					90
+        ypos					-5
+		rui                     "ui/basic_image.rpak"
+		visible					1
+
+		pin_to_sibling			ButtonPilotMelee
+		pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	TOP_LEFT
+	}
+
+    ButtonTitanMelee
+    {
+		ControlName				RuiButton
+		InheritProperties		LoadoutButtonMedium
+        classname				EquipmentLoadoutPanelButtonClass
+        scriptID				23
+        xpos					-105
+
+        navUp					ButtonWeapon3
+        navDown					RenameEditBox
+        navLeft                 ButtonExecution
+        navRight                ButtonKit2
+
+        pin_to_sibling			MeleeName
+        pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	BOTTOM_LEFT
+    }
+
+    ButtonFrame1
+	{
+		ControlName				RuiPanel
+		wide					90
+		tall					90
+        ypos					-5
+		rui                     "ui/basic_image.rpak"
+		visible					1
+
+		pin_to_sibling			ButtonTitanMelee
+		pin_corner_to_sibling	TOP_LEFT
+        pin_to_sibling_corner	TOP_LEFT
+	}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     EquipmentDetails
     {

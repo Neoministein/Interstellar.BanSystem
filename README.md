@@ -7,14 +7,20 @@ This is the repository for the Interstellar.BanSystem Mod for the [R2Northstart 
 **Required by:** Server (To use the UI you also need it on the client)
 
 UI features:
-- You can ban Tacticals, Ordinances, Weapons, Titans and Boosts
+- You can ban Tacticals
+- You can ban Ordinances
+- You can ban Weapons
+- You can ban Titans
+- You can ban Boosts
+- You can ban Pilot Kits
+- You can ban Pilot Melee / Titan Melee
 - You can ban Executions
 - You can force Weapon attachments and visor
 - You can force Titan kit 1, 2 and 3
 - You can import / export predefined banned loadouts
 
 Additional features:
-- When something is banned the first non banned Weapon, Tacticals ect. is given. 
+- When something is banned the first non banned Weapon, Tacticals ect. is given.
 - If all of a category are banned, the option to use it will be disabled.
 - Titan meter goes back to 0 if all are banned after you reached 100%
 
@@ -26,8 +32,8 @@ By default, everybody can change the banned loadout.
 
 To stop players from changing the configuration, you can set the inbuilt Northstar config `ns_private_match_only_host_can_change_settings` to 1 at `Northstar.CustomServers\mod.json`
 
-If you use a dedicated server, you can add yourself as an admin in the mods config at `Interstellar.BanSystem\mod.json`. 
-Change the Default Values of "grant_admin" to your name or UID. You can add multiple by adding a `,` between them with **NO SPACES**. 
+If you use a dedicated server, you can add yourself as an admin in the mods config at `Interstellar.BanSystem\mod.json`.
+Change the Default Values of "grant_admin" to your name or UID. You can add multiple by adding a `,` between them with **NO SPACES**.
 
 ```json
 "ConVars": [
@@ -53,7 +59,7 @@ Change the Default Values of "ban_config" to a exported config, which you can ge
 ]
 ```
 
-You can also set it on the fly by typing this into the console `script_ui ImportBanConfig("THE_BAN_CONFIG")` 
+You can also set it on the fly by typing this into the console `script_ui ImportBanConfig("THE_BAN_CONFIG")`
 
 ## Developed by
 

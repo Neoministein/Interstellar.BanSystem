@@ -8,14 +8,22 @@ global function getAbilityBanData
 global function getGrenadeBanData
 global function getBoostBanData
 global function getExecutionBanData
+global function getKitBanData
+global function getMeleeBanData
 
 global function createUniversalBanStruct
 global function createWeaponBanStruct
 global function createTitanBanStruct
 global function createBoostBanStruct
 
+const NR_OF_BANABLE_ELEMENTS = 201
+
+global const UNKNOWN_NAME = "UNKNOWN"
+global const UNDEFINED = "UNDEFINED"
+
 global struct WeaponBanStruct {
 	string name,
+	string displayName,
 	bool   disabled,
 	string	  mod1,
 	string    mod2,
@@ -26,26 +34,29 @@ global struct WeaponBanStruct {
 global struct BoostBanStruct
 {
 	string name,
+	string displayName,
 	bool   disabled,
 	int persistantVarId,
 	int burnMeterId,
 }
 
-global struct TitanBanStruct
-{
-	string name,
-	bool disabled,
-
-	//thanks monarch for making me  handle 3 seperet core passives
-	string passive1,
-	string passive2,
-	string passive3,
-}
-
 global struct UniversalBanStruct
 {
 	string name,
+	string displayName,
 	bool disabled
+}
+
+global struct TitanBanStruct
+{
+	string name,
+	string displayName,
+	bool disabled,
+
+	//thanks monarch for making me  handle 3 seperet core passives
+	UniversalBanStruct& passive1,
+	UniversalBanStruct& passive2,
+	UniversalBanStruct& passive3,
 }
 
 struct {
@@ -53,9 +64,12 @@ struct {
  array<UniversalBanStruct> grenadeArray
  array<UniversalBanStruct> abilityArray
  array<UniversalBanStruct> executionArray
+ array<UniversalBanStruct> kitArray
+ array<UniversalBanStruct> meleeArray
  array<BoostBanStruct> boostArray
  array<TitanBanStruct> titanArray
  array<string> admins
+ table< string, array< UniversalBanStruct > > titanPassives
 } file
 
 void function BanEquipment_Init()
@@ -97,11 +111,11 @@ void function ImportData()
 	data += GetCurrentPlaylistVarOrUseValue("BAN_DATA_3", "") + ""
 
 	array< string > importArray = parseImportData( data )
-	if(importArray.len() != 190)
+	if(importArray.len() != NR_OF_BANABLE_ELEMENTS)
 	{
 		string cVar = GetConVarString( "ban_config" )
     		importArray = parseImportData( cVar )
-		if(importArray.len() == 190)
+		if(importArray.len() == NR_OF_BANABLE_ELEMENTS)
 		{
 			if(IsLobby()) {
 				SetPlaylistVarOverride("BAN_DATA_0", cVar.slice(0,60))
@@ -122,7 +136,7 @@ void function ImportData()
 		UpdateAbility( i, importArray[currentIndex++] )
 	}
 
-	for( int i = 0; i < file.executionArray.len(); i++ )
+	for( int i = 0; i < file.executionArray.len() + file.kitArray.len() + file.meleeArray.len() ; i++ )
 	{
 		UpdateEquipment( i, importArray[currentIndex++] )
 	}
@@ -164,6 +178,14 @@ void function ImportData()
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
 	foreach (UniversalBanStruct banStruct in file.executionArray )
+	{
+		dataToStore += banStruct.disabled ? "1" : "0"
+	}
+	foreach (UniversalBanStruct banStruct in file.kitArray )
+	{
+		dataToStore += banStruct.disabled ? "1" : "0"
+	}
+	foreach (UniversalBanStruct banStruct in file.meleeArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
@@ -246,6 +268,14 @@ bool function ClientCommandCallback_BanUiUpdateData( entity player, array<string
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
 	foreach (UniversalBanStruct banStruct in file.executionArray )
+	{
+		dataToStore += banStruct.disabled ? "1" : "0"
+	}
+	foreach (UniversalBanStruct banStruct in file.kitArray )
+	{
+		dataToStore += banStruct.disabled ? "1" : "0"
+	}
+	foreach (UniversalBanStruct banStruct in file.meleeArray )
 	{
 		dataToStore += banStruct.disabled ? "1" : "0"
 	}
@@ -343,7 +373,13 @@ void function UpdateBoost(int index, string data)
 
 void function UpdateEquipment(int index, string data)
 {
-	file.executionArray[index].disabled = (data == "1") ? true : false
+	if(index > 21) {
+		file.meleeArray[index-22].disabled = (data == "1") ? true : false
+	} else if (index > 12) {
+		file.kitArray[index-13].disabled = (data == "1") ? true : false
+	} else {
+		file.executionArray[index].disabled = (data == "1") ? true : false
+	}
 }
 
 void function UpdateWeapon(int index, string data)
@@ -360,11 +396,12 @@ void function UpdateWeapon(int index, string data)
 void function UpdateTitan(int index, string data)
 {
 	TitanBanStruct structToChange = file.titanArray[index]
+
 	array< string > dataAtr = parseImportData(data)
 
 	if( index != 5)
 	{
-		structToChange.disabled =  dataAtr[0] == "1" ? true : false
+		structToChange.disabled = dataAtr[0] == "1" ? true : false
 		structToChange.passive1 = GetTitanKitStringFromId(dataAtr[1], structToChange.name )
 		structToChange.passive2 = GetTitanPassiveStringFromId(dataAtr[2])
 		structToChange.passive3 = GetTitanPassiveStringFromId(dataAtr[3])
@@ -425,202 +462,31 @@ string function GetWeaponVisorStringFromId(string str)
 	return "UNDEFINED"
 }
 
-string function GetTitanPassiveStringFromId(string str)
+UniversalBanStruct function GetTitanPassiveStringFromId(string str)
 {
-	switch(str)
-	{
-		case "0":
-			return "UNDEFINED"
-		case "1":
-			return "pas_enhanced_titan_ai"
-		case "2":
-			return "pas_auto_eject"
-		case "3":
-			return "pas_mobility_dash_capacity"
-		case "4":
-			return "pas_hyper_core"
-		case "5":
-			return "pas_build_up_nuclear_core"
-		case "6":
-			return "pas_anti_rodeo"
-		case "7":
-			return "pas_bubbleshield"
-		case "8":
-			return "pas_warpfall"
+	try {
+		return file.titanPassives["passive"][int( str )]
+	} catch(e) {
+		return createUniversalBanStruct(UNDEFINED)
 	}
-	return "UNDEFINED"
 }
 
-string function GetTitanKitStringFromId(string str, string titanKit)
+UniversalBanStruct function GetTitanKitStringFromId(string str, string titanKit)
 {
-	if(str == "0")
-	{
-		return "UNDEFINED"
+	try {
+		return file.titanPassives[titanKit][int( str )]
+	} catch(e) {
+		return createUniversalBanStruct(UNDEFINED)
 	}
-
-	if(titanKit == "ion")
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_ion_weapon"
-			case "pas_ion_tripwire":
-				return "2"
-			case "3":
-				return "pas_ion_vortex"
-			case "4":
-				return "pas_ion_lasercannon"
-			case "5":
-				return "pas_ion_weapon_ads"
-		}
-	}
-
-	if(titanKit == "scorch")
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_scorch_weapon"
-			case "2":
-				return "pas_scorch_selfdmg"
-			case "3":
-				return "pas_scorch_shield"
-			case "4":
-				return "pas_scorch_firewall"
-			case "5":
-				return "pas_scorch_flamecore"
-		}
-	}
-
-	if(titanKit == "northstar")
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_northstar_weapon"
-			case "2":
-				return "pas_northstar_cluster"
-			case "3":
-				return "pas_northstar_trap"
-			case "4":
-				return "pas_northstar_flightcore"
-			case "5":
-				return "pas_northstar_optics"
-		}
-	}
-
-	if(titanKit == "ronin")
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_ronin_weapon"
-			case "2":
-				return "pas_ronin_arcwave"
-			case "3":
-				return "pas_ronin_phase"
-			case "4":
-				return "pas_ronin_swordcore"
-			case "5":
-				return "pas_ronin_autoshift"
-		}
-	}
-
-	if(titanKit == "tone")
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_tone_weapon"
-			case "2":
-				return "pas_tone_wall"
-			case "3":
-				return "pas_tone_sonar"
-			case "4":
-				return "pas_tone_rockets"
-			case "5":
-				return "pas_tone_burst"
-		}
-	}
-
-	if(titanKit == "legion")
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_enhanced_titan_ai"
-			case "2":
-				return "pas_legion_smartcore"
-			case "3":
-				return "pas_legion_gunshield"
-			case "4":
-				return "pas_legion_spinup"
-			case "5":
-				return "pas_legion_chargeshot"
-		}
-	}
-
-	if(titanKit == "vanguard")
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_vanguard_shield"
-			case "2":
-				return "pas_vanguard_coremeter"
-			case "3":
-				return "pas_vanguard_rearm"
-			case "4":
-				return "pas_vanguard_doom"
-		}
-	}
-	return "UNDEFINED"
 }
 
-string function GetMonarchCoreStringFromId(string str, int coreStage)
+UniversalBanStruct function GetMonarchCoreStringFromId(string str, int coreStage)
 {
-	if(str == "0")
-	{
-		return "UNDEFINED"
+	try {
+		return file.titanPassives["vanguard_" + coreStage][int( str )]
+	} catch(e) {
+		return createUniversalBanStruct(UNDEFINED)
 	}
-	if(coreStage == 0)
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_vanguard_core1"
-			case "2":
-				return "pas_vanguard_core2"
-			case "3":
-				return "pas_vanguard_core3"
-		}
-	}
-
-	if(coreStage == 1)
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_vanguard_core4"
-			case "2":
-				return "pas_vanguard_core5"
-			case "3":
-				return "pas_vanguard_core6"
-		}
-	}
-	if(coreStage == 2)
-	{
-		switch(str)
-		{
-			case "1":
-				return "pas_vanguard_core7"
-			case "2":
-				return "pas_vanguard_core8"
-			case "3":
-				return "pas_vanguard_core9"
-		}
-	}
-	return "UNDEFINED"
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///Serialize data
@@ -698,15 +564,15 @@ string function GetTitanStringaData(int id)
 	if(id != 5)
 	{
 		data += currentStruct.disabled ? "1" : "0"
-		data += GetTitanKitIdFromStr(currentStruct.passive1, currentStruct.name)
-		data += GetTitanPassiveIdFromStr(currentStruct.passive2)
-		data += GetTitanPassiveIdFromStr(currentStruct.passive3)
+		data += GetTitanKitIdFromStr(currentStruct.passive1.name, currentStruct.name)
+		data += GetTitanPassiveIdFromStr(currentStruct.passive2.name)
+		data += GetTitanPassiveIdFromStr(currentStruct.passive3.name)
 	} else
 	{
 		data += "1"
-		data += GetMonarchCoreIdFromString(currentStruct.passive1, 0)
-		data += GetMonarchCoreIdFromString(currentStruct.passive2, 1)
-		data += GetMonarchCoreIdFromString(currentStruct.passive3, 2)
+		data += GetMonarchCoreIdFromString(currentStruct.passive1.name, 0)
+		data += GetMonarchCoreIdFromString(currentStruct.passive2.name, 1)
+		data += GetMonarchCoreIdFromString(currentStruct.passive3.name, 2)
 	}
 
 	return data
@@ -714,199 +580,40 @@ string function GetTitanStringaData(int id)
 
 string function GetTitanPassiveIdFromStr(string str)
 {
-	switch(str)
-	{
-		case "UNDEFINED":
-			return "0"
-		case "pas_enhanced_titan_ai":
-			return "1"
-		case "pas_auto_eject":
-			return "2"
-		case "pas_mobility_dash_capacity":
-			return "3"
-		case "pas_hyper_core":
-			return "4"
-		case "pas_build_up_nuclear_core":
-			return "5"
-		case "pas_anti_rodeo":
-			return "6"
-		case "pas_bubbleshield":
-			return "7"
-		case "pas_warpfall":
-			return "8"
-	}
+	try {
+		for(int i = 0; i < file.titanPassives["passive"].len(); i++) {
+			if (file.titanPassives["passive"][i].name == str) {
+				return i.tostring()
+			}
+		}
+	} catch(e) {}
+
 	return "0"
 }
 
 string function GetTitanKitIdFromStr(string str, string titanKit)
 {
-	if(str == "UNDEFINED")
-	{
-		return "0"
-	}
-
-	if(titanKit == "ion")
-	{
-		switch(str)
-		{
-			case "pas_ion_weapon":
-				return "1"
-			case "pas_ion_tripwire":
-				return "2"
-			case "pas_ion_vortex":
-				return "3"
-			case "pas_ion_lasercannon":
-				return "4"
-			case "pas_ion_weapon_ads":
-				return "5"
+	try {
+		for(int i = 0; i < file.titanPassives[titanKit].len(); i++) {
+			if (file.titanPassives[titanKit][i].name == str) {
+				return i.tostring()
+			}
 		}
-	}
+	} catch(e) {}
 
-	if(titanKit == "scorch")
-	{
-		switch(str)
-		{
-			case "pas_scorch_weapon":
-				return "1"
-			case "pas_scorch_selfdmg":
-				return "2"
-			case "pas_scorch_shield":
-				return "3"
-			case "pas_scorch_firewall":
-				return "4"
-			case "pas_scorch_flamecore":
-				return "5"
-		}
-	}
-
-	if(titanKit == "northstar")
-	{
-		switch(str)
-		{
-			case "pas_northstar_weapon":
-				return "1"
-			case "pas_northstar_cluster":
-				return "2"
-			case "pas_northstar_trap":
-				return "3"
-			case "pas_northstar_flightcore":
-				return "4"
-			case "pas_northstar_optics":
-				return "5"
-		}
-	}
-
-	if(titanKit == "ronin")
-	{
-		switch(str)
-		{
-			case "pas_ronin_weapon":
-				return "1"
-			case "pas_ronin_arcwave":
-				return "2"
-			case "pas_ronin_phase":
-				return "3"
-			case "pas_ronin_swordcore":
-				return "4"
-			case "pas_ronin_autoshift":
-				return "5"
-		}
-	}
-
-	if(titanKit == "tone")
-	{
-		switch(str)
-		{
-			case "pas_tone_weapon":
-				return "1"
-			case "pas_tone_wall":
-				return "2"
-			case "pas_tone_sonar":
-				return "3"
-			case "pas_tone_rockets":
-				return "4"
-			case "pas_tone_burst":
-				return "5"
-		}
-	}
-
-	if(titanKit == "legion")
-	{
-		switch(str)
-		{
-			case "pas_enhanced_titan_ai":
-				return "1"
-			case "pas_legion_smartcore":
-				return "2"
-			case "pas_legion_gunshield":
-				return "3"
-			case "pas_legion_spinup":
-				return "4"
-			case "pas_legion_chargeshot":
-				return "5"
-		}
-	}
-
-	if(titanKit == "vanguard")
-	{
-		switch(str)
-		{
-			case "pas_vanguard_shield":
-				return "1"
-			case "pas_vanguard_coremeter":
-				return "2"
-			case "pas_vanguard_rearm":
-				return "3"
-			case "pas_vanguard_doom":
-				return "4"
-		}
-	}
 	return "0"
 }
 
 string function GetMonarchCoreIdFromString(string str, int coreStage)
 {
-	if(str == "UNDEFINED")
-	{
-		return "0"
-	}
-	if(coreStage == 0)
-	{
-		switch(str)
-		{
-			case "pas_vanguard_core1":
-				return "1"
-			case "pas_vanguard_core2":
-				return "2"
-			case "pas_vanguard_core3":
-				return "3"
+	try {
+		for(int i = 0; i < file.titanPassives["vanguard_" + coreStage].len(); i++) {
+			if (file.titanPassives["vanguard_" + coreStage][i].name == str) {
+				return i.tostring()
+			}
 		}
-	}
+	} catch(e) {}
 
-	if(coreStage == 1)
-	{
-		switch(str)
-		{
-			case "pas_vanguard_core4":
-				return "1"
-			case "pas_vanguard_core5":
-				return "2"
-			case "pas_vanguard_core6":
-				return "3"
-		}
-	}
-	if(coreStage == 2)
-	{
-		switch(str)
-		{
-			case "pas_vanguard_core7":
-				return "1"
-			case "pas_vanguard_core8":
-				return "2"
-			case "pas_vanguard_core9":
-				return "3"
-		}
-	}
 	return "0"
 }
 
@@ -944,6 +651,16 @@ array<UniversalBanStruct> function getExecutionBanData()
 	return file.executionArray
 }
 
+array<UniversalBanStruct> function getKitBanData()
+{
+	return file.kitArray
+}
+
+array<UniversalBanStruct> function getMeleeBanData()
+{
+	return file.meleeArray
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///Setup data
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -951,121 +668,222 @@ array<UniversalBanStruct> function getExecutionBanData()
 void function InitData()
 {
 	file.grenadeArray = []
-	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_frag_grenade"))
-	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_grenade_emp"))
-	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_thermite_grenade"))
-	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_grenade_gravity"))
-	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_grenade_electric_smoke"))
-	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_satchel"))
+	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_frag_grenade","Frag Grenade"))
+	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_grenade_emp", "Arc Grenade"))
+	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_thermite_grenade","Firestar"))
+	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_grenade_gravity","Gravity Star"))
+	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_grenade_electric_smoke","Electric Smoke Grenade"))
+	file.grenadeArray.append(createUniversalBanStruct("mp_weapon_satchel","Satchel"))
 
 	file.abilityArray = []
-	file.abilityArray.append(createUniversalBanStruct("mp_ability_cloak"))
-	file.abilityArray.append(createUniversalBanStruct("mp_weapon_grenade_sonar"))
-	file.abilityArray.append(createUniversalBanStruct("mp_ability_grapple"))
-	file.abilityArray.append(createUniversalBanStruct("mp_ability_heal"))
-	file.abilityArray.append(createUniversalBanStruct("mp_weapon_deployable_cover"))
-	file.abilityArray.append(createUniversalBanStruct("mp_ability_shifter"))
-	file.abilityArray.append(createUniversalBanStruct("mp_ability_holopilot"))
+	file.abilityArray.append(createUniversalBanStruct("mp_ability_cloak","Cloak"))
+	file.abilityArray.append(createUniversalBanStruct("mp_weapon_grenade_sonar","Pulse Blade"))
+	file.abilityArray.append(createUniversalBanStruct("mp_ability_grapple","Grapple"))
+	file.abilityArray.append(createUniversalBanStruct("mp_ability_heal","Stim"))
+	file.abilityArray.append(createUniversalBanStruct("mp_weapon_deployable_cover","A-Wall"))
+	file.abilityArray.append(createUniversalBanStruct("mp_ability_shifter","Phase Shift"))
+	file.abilityArray.append(createUniversalBanStruct("mp_ability_holopilot","Holo Pilot"))
 
 	file.boostArray = []
 
-	file.boostArray.append(createBoostBanStruct("burnmeter_amped_weapons" 	  ,1, 11))
-	file.boostArray.append(createBoostBanStruct("burnmeter_ticks" 			  ,2, 12))
-	file.boostArray.append(createBoostBanStruct("burnmeter_ap_turret_weapon"  ,4, 18))
-	file.boostArray.append(createBoostBanStruct("burnmeter_maphack" 		  ,0, 10))
-	file.boostArray.append(createBoostBanStruct("burnmeter_emergency_battery" ,8, 20))
-	file.boostArray.append(createBoostBanStruct("burnmeter_radar_jammer" 	  ,10, 22))
-	file.boostArray.append(createBoostBanStruct("burnmeter_at_turret_weapon"  ,6, 17))
-	file.boostArray.append(createBoostBanStruct("burnmeter_smart_pistol" 	  ,9, 21))
-	file.boostArray.append(createBoostBanStruct("burnmeter_phase_rewind" 	  ,5, 16))
-	file.boostArray.append(createBoostBanStruct("burnmeter_hard_cover" 		  ,11, 23))
-	file.boostArray.append(createBoostBanStruct("burnmeter_holopilot_nova" 	  ,7, 19))
-	file.boostArray.append(createBoostBanStruct("burnmeter_random_foil" 	  ,3, 14))
+	file.boostArray.append(createBoostBanStruct("burnmeter_amped_weapons" 	  ,1, 11,"Amped Weapons"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_ticks" 			  ,2, 12,"Ticks"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_ap_turret_weapon"  ,4, 18,"Pilot Sentry"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_maphack" 		  ,0, 10,"Map Hack"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_emergency_battery" ,8, 20,"Battery Back-up"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_radar_jammer" 	  ,10, 22,"Radar Jammer"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_at_turret_weapon"  ,6, 17,"Titan Sentry"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_smart_pistol" 	  ,9, 21,"Smart Pistol"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_phase_rewind" 	  ,5, 16,"Phase Rewind"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_hard_cover" 		  ,11, 23,"Hard Cover"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_holopilot_nova" 	  ,7, 19,"Holo Pilot Nova"))
+	file.boostArray.append(createBoostBanStruct("burnmeter_random_foil" 	  ,3, 14,"Dice Roll"))
 
 	file.weaponArray = []
 	//index 0-29
 	//index 0 - 22 primary
 	//index 23 - 25 sec
 	// index 26 - 29 at
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_rspn101"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_rspn101_og"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_hemlok"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_g2"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_vinson"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_car"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_alternator_smg"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_hemlok_smg"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_r97"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_lmg"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_lstar"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_esaw"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_sniper", "ricochet"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_doubletake", "ricochet"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_dmr"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_shotgun"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_mastiff"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_smr"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_epg"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_softball"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_pulse_lmg"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_wingman_n", "ricochet"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_shotgun_pistol"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_rspn101","R-201"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_rspn101_og","R-101"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_hemlok","Hemlock"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_g2","G2"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_vinson","Flatline"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_car","CAR"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_alternator_smg","Alternator"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_hemlok_smg","Volt"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_r97","R-97"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_lmg","Spitfire"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_lstar","L-STAR"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_esaw","Devotion"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_sniper","Kraber" ,"ricochet"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_doubletake","DoubleTake" ,"ricochet"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_dmr","DMR"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_shotgun","EVA-8"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_mastiff","Mastiff"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_smr","Sidewinder"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_epg","EPG"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_softball","Softball"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_pulse_lmg","Cold War"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_wingman_n","Wingman Elite", "ricochet"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_shotgun_pistol","Mozambique"))
 
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_autopistol", "silencer"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_semipistol", "silencer"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_wingman", "silencer"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_autopistol","RE-45" ,"silencer"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_semipistol","P2016" ,"silencer"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_wingman","B3 Wingman" ,"silencer"))
 
 
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_defender", "quick_charge"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_mgl"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_arc_launcher"))
-	file.weaponArray.append(createWeaponBanStruct("mp_weapon_rocket_launcher"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_defender","Charge Rifle", "quick_charge"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_mgl","MGL"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_arc_launcher","Thunderbolt"))
+	file.weaponArray.append(createWeaponBanStruct("mp_weapon_rocket_launcher","Archer"))
 
 	file.titanArray = []
-	file.titanArray.append(createTitanBanStruct("northstar"))
-	file.titanArray.append(createTitanBanStruct("ronin"))
+	file.titanArray.append(createTitanBanStruct("northstar","Northstar"))
+	file.titanArray.append(createTitanBanStruct("ronin","Ronin"))
 
-	file.titanArray.append(createTitanBanStruct("ion"))
-	file.titanArray.append(createTitanBanStruct("tone"))
-	file.titanArray.append(createTitanBanStruct("vanguard"))
-	file.titanArray.append(createTitanBanStruct("vanguardCores", true))
+	file.titanArray.append(createTitanBanStruct("ion","Ion"))
+	file.titanArray.append(createTitanBanStruct("tone","Tone"))
+	file.titanArray.append(createTitanBanStruct("vanguard","Monarch"))
+	file.titanArray.append(createTitanBanStruct("vanguardCores","Monarch Cores wtf is this doing here ?" ,true))
 
-	file.titanArray.append(createTitanBanStruct("scorch"))
-	file.titanArray.append(createTitanBanStruct("legion"))
+	file.titanArray.append(createTitanBanStruct("scorch","Scorch"))
+	file.titanArray.append(createTitanBanStruct("legion","Legion"))
+
+	file.titanPassives["ion"] <- []
+	file.titanPassives["ion"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["ion"].append(createUniversalBanStruct("pas_ion_weapon","Entangled Energy"))
+	file.titanPassives["ion"].append(createUniversalBanStruct("pas_ion_tripwire","Zero-Point Tripwire"))
+	file.titanPassives["ion"].append(createUniversalBanStruct("pas_ion_vortex","Vortex Amplifier"))
+	file.titanPassives["ion"].append(createUniversalBanStruct("pas_ion_lasercannon","Grand Cannon"))
+	file.titanPassives["ion"].append(createUniversalBanStruct("pas_ion_weapon_ads","Refraction Lens"))
+
+	file.titanPassives["scorch"] <- []
+	file.titanPassives["scorch"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["scorch"].append(createUniversalBanStruct("pas_scorch_weapon","Wildfire Launcher"))
+	file.titanPassives["scorch"].append(createUniversalBanStruct("pas_scorch_selfdmg","Tempered Plating"))
+	file.titanPassives["scorch"].append(createUniversalBanStruct("pas_scorch_shield","Inferno Shield"))
+	file.titanPassives["scorch"].append(createUniversalBanStruct("pas_scorch_firewall","Fuel for the Fire"))
+	file.titanPassives["scorch"].append(createUniversalBanStruct("pas_scorch_flamecore","Scorched Earth"))
+
+	file.titanPassives["northstar"] <- []
+	file.titanPassives["northstar"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["northstar"].append(createUniversalBanStruct("pas_northstar_weapon","Piercing Shot"))
+	file.titanPassives["northstar"].append(createUniversalBanStruct("pas_northstar_cluster","Enhanced Payload"))
+	file.titanPassives["northstar"].append(createUniversalBanStruct("pas_northstar_trap","Twin Traps"))
+	file.titanPassives["northstar"].append(createUniversalBanStruct("pas_northstar_flightcore","Viper Thrusters"))
+	file.titanPassives["northstar"].append(createUniversalBanStruct("pas_northstar_optics","Thread Optics"))
+
+	file.titanPassives["ronin"] <- []
+	file.titanPassives["ronin"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["ronin"].append(createUniversalBanStruct("pas_ronin_weapon","Ricochet Rounds"))
+	file.titanPassives["ronin"].append(createUniversalBanStruct("pas_ronin_arcwave","Thunderstorm"))
+	file.titanPassives["ronin"].append(createUniversalBanStruct("pas_ronin_phase","Temporal Anomaly"))
+	file.titanPassives["ronin"].append(createUniversalBanStruct("pas_ronin_swordcore","Highlander"))
+	file.titanPassives["ronin"].append(createUniversalBanStruct("pas_ronin_autoshift","Phase Reflex"))
+
+	file.titanPassives["tone"] <- []
+	file.titanPassives["tone"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["tone"].append(createUniversalBanStruct("pas_tone_weapon","Enhanced Tracker Rounds"))
+	file.titanPassives["tone"].append(createUniversalBanStruct("pas_tone_wall","Reinforced Particle Wall"))
+	file.titanPassives["tone"].append(createUniversalBanStruct("pas_tone_sonar","Pulse-Echo"))
+	file.titanPassives["tone"].append(createUniversalBanStruct("pas_tone_rockets","Rocket Barrage"))
+	file.titanPassives["tone"].append(createUniversalBanStruct("pas_tone_burst","Burst Loader"))
+
+	file.titanPassives["legion"] <- []
+	file.titanPassives["legion"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["legion"].append(createUniversalBanStruct("pas_legion_weapon","Enhanced Ammo Capacity"))
+	file.titanPassives["legion"].append(createUniversalBanStruct("pas_legion_smartcore","Sensor Array"))
+	file.titanPassives["legion"].append(createUniversalBanStruct("pas_legion_gunshield","Bulwark"))
+	file.titanPassives["legion"].append(createUniversalBanStruct("pas_legion_spinup","Light-Weight Alloys"))
+	file.titanPassives["legion"].append(createUniversalBanStruct("pas_legion_chargeshot","Hidden Compartment"))
+
+	file.titanPassives["vanguard"] <- []
+	file.titanPassives["vanguard"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["vanguard"].append(createUniversalBanStruct("pas_vanguard_shield","Shield Amplifier"))
+	file.titanPassives["vanguard"].append(createUniversalBanStruct("pas_vanguard_coremeter","Energy Thief"))
+	file.titanPassives["vanguard"].append(createUniversalBanStruct("pas_vanguard_rearm","Rapid Rearm"))
+	file.titanPassives["vanguard"].append(createUniversalBanStruct("pas_vanguard_doom","Survival of the Fittest"))
+
+	file.titanPassives["vanguard_0"] <- []
+	file.titanPassives["vanguard_0"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["vanguard_0"].append(createUniversalBanStruct("pas_vanguard_core1","Arc Rounds"))
+	file.titanPassives["vanguard_0"].append(createUniversalBanStruct("pas_vanguard_core2","Missile Racks"))
+	file.titanPassives["vanguard_0"].append(createUniversalBanStruct("pas_vanguard_core3","Energy Transfer"))
+
+	file.titanPassives["vanguard_1"] <- []
+	file.titanPassives["vanguard_1"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["vanguard_1"].append(createUniversalBanStruct("pas_vanguard_core4","Rearm and Reload"))
+	file.titanPassives["vanguard_1"].append(createUniversalBanStruct("pas_vanguard_core5","Maelstorm"))
+	file.titanPassives["vanguard_1"].append(createUniversalBanStruct("pas_vanguard_core6","Energy Field"))
+
+	file.titanPassives["vanguard_2"] <- []
+	file.titanPassives["vanguard_2"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["vanguard_2"].append(createUniversalBanStruct("pas_vanguard_core7","Multi-Trarget Missiles"))
+	file.titanPassives["vanguard_2"].append(createUniversalBanStruct("pas_vanguard_core8","Superior Chassis"))
+	file.titanPassives["vanguard_2"].append(createUniversalBanStruct("pas_vanguard_core9","XO-16 Accelerator"))
+
+	file.titanPassives["passive"] <- []
+	file.titanPassives["passive"].append(createUniversalBanStruct(UNDEFINED))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_enhanced_titan_ai","Assault Chip"))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_auto_eject","Stealth Auto-Eject"))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_mobility_dash_capacity","Turbo Engine"))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_hyper_core","Overcore"))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_build_up_nuclear_core","Nuclear Ejection"))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_anti_rodeo","Counter Ready"))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_bubbleshield","Dome Shield"))
+	file.titanPassives["passive"].append(createUniversalBanStruct("pas_warpfall","Warpfall"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_neck_snap","Neck Snap"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_telefrag","Inner Pieces"))
+	file.executionArray.append(createUniversalBanStruct("execution_grapple","Curb Check"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_stim", "Late Hit"))
+	file.executionArray.append(createUniversalBanStruct("execution_cloak", "Now You See Me"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_ampedwall", "Hole In The Wall"))
+	file.executionArray.append(createUniversalBanStruct("execution_holopilot", "Shadow Boxing"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_pulseblade","Get To The Point"))
+	file.executionArray.append(createUniversalBanStruct("execution_face_stab","In Your Face"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_backshot","Grand Theft Semi-Auto"))
+	file.executionArray.append(createUniversalBanStruct("execution_combo","2-3-2 Combo"))
+
+	file.executionArray.append(createUniversalBanStruct("execution_knockout","Knee Puls"))
+	file.executionArray.append(createUniversalBanStruct("execution_random","Random"))
 
 
-	file.executionArray.append(createUniversalBanStruct("execution_neck_snap"))
-	file.executionArray.append(createUniversalBanStruct("execution_telefrag"))
-	file.executionArray.append(createUniversalBanStruct("execution_grapple"))
+	file.kitArray.append(createUniversalBanStruct("pas_power_cell","Power Cell"))
+    file.kitArray.append(createUniversalBanStruct("pas_fast_health_regen","Fast Regen"))
+    file.kitArray.append(createUniversalBanStruct("pas_ordnance_pack","Ordnance Expert"))
+    file.kitArray.append(createUniversalBanStruct("pas_fast_embark","Phase Embark"))
 
-	file.executionArray.append(createUniversalBanStruct("execution_stim"))
-	file.executionArray.append(createUniversalBanStruct("execution_cloak"))
-	file.executionArray.append(createUniversalBanStruct("execution_ampedwall"))
+	file.kitArray.append(createUniversalBanStruct("pas_enemy_death_icons","Kill Report"))
+    file.kitArray.append(createUniversalBanStruct("pas_wallhang","Wallhang"))
+    file.kitArray.append(createUniversalBanStruct("pas_ads_hover","Hover"))
+    file.kitArray.append(createUniversalBanStruct("pas_stealth_movement","Low Profile"))
+    file.kitArray.append(createUniversalBanStruct("pas_at_hunter","Titan Hunter"))
 
-	file.executionArray.append(createUniversalBanStruct("execution_holopilot"))
-	file.executionArray.append(createUniversalBanStruct("execution_pulseblade"))
-	file.executionArray.append(createUniversalBanStruct("execution_face_stab"))
-
-	file.executionArray.append(createUniversalBanStruct("execution_backshot"))
-	file.executionArray.append(createUniversalBanStruct("execution_combo"))
-	file.executionArray.append(createUniversalBanStruct("execution_knockout"))
-
-	file.executionArray.append(createUniversalBanStruct("execution_random"))
-
+	file.meleeArray.append(createUniversalBanStruct("titan_melee","Titan Melee"))
+	file.meleeArray.append(createUniversalBanStruct("pilot_melee","Pilot Melee"))
 }
 
-UniversalBanStruct function createUniversalBanStruct(string name)
+UniversalBanStruct function createUniversalBanStruct(string name,string displayName = UNKNOWN_NAME)
 {
 	UniversalBanStruct newStruct
 	newStruct.name = name
+	newStruct.displayName = displayName
 	newStruct.disabled = false
 	return newStruct
 }
 
-WeaponBanStruct function createWeaponBanStruct(string name, string uniqueMod = "")
+WeaponBanStruct function createWeaponBanStruct(string name ,string displayName = UNKNOWN_NAME ,string uniqueMod = "")
 {
 	WeaponBanStruct newStruct
 	newStruct.name = name
+	newStruct.displayName = displayName
 	newStruct.disabled = false
 	newStruct.mod1 = "UNDEFINED"
 	newStruct.mod2 = "UNDEFINED"
@@ -1075,24 +893,26 @@ WeaponBanStruct function createWeaponBanStruct(string name, string uniqueMod = "
 	return newStruct
 }
 
-BoostBanStruct function createBoostBanStruct(string name, int persistantVarId, int burnMeterId)
+BoostBanStruct function createBoostBanStruct(string name, int persistantVarId, int burnMeterId, string displayName= UNKNOWN_NAME)
 {
 	BoostBanStruct newStruct
 	newStruct.name = name
+	newStruct.displayName = displayName
 	newStruct.disabled = false
 	newStruct.persistantVarId = persistantVarId
 	newStruct.burnMeterId = burnMeterId
 	return newStruct
 }
 
-TitanBanStruct function createTitanBanStruct(string name, bool disabled = false)
+TitanBanStruct function createTitanBanStruct(string name,string displayName= UNKNOWN_NAME ,bool disabled = false)
 {
 	TitanBanStruct newStruct
 	newStruct.name = name
+	newStruct.displayName = displayName
 	newStruct.disabled = disabled
-	newStruct.passive1 = "UNDEFINED"
-	newStruct.passive2 = "UNDEFINED"
-	newStruct.passive3 = "UNDEFINED"
+	newStruct.passive1 = createUniversalBanStruct(UNDEFINED)
+	newStruct.passive2 = createUniversalBanStruct(UNDEFINED)
+	newStruct.passive3 = createUniversalBanStruct(UNDEFINED)
 	return newStruct
 }
 

@@ -153,7 +153,7 @@ resource/ui/menus/custom_match_settings_ban.menu
 		    xpos					450
     	    ypos                    76
 		    zpos					10
-			wide					1048
+			wide					2000
 			tall					1080
 		    visible					0
 		    enabled                 0
