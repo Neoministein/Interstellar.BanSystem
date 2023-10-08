@@ -1,5 +1,8 @@
 # Interstellar.BanSystem
 
+![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fthunderstore.io%2Fapi%2Fexperimental%2Fpackage%2FInterstellar%2FInterstellar_BanSystem%2F&query=%24.latest.version_number&label=Version&color=green)
+![Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fthunderstore.io%2Fapi%2Fexperimental%2Fpackage%2FInterstellar%2FInterstellar_BanSystem%2F&query=%24.total_downloads&label=Downloads%20)
+
 This is the repository for the Interstellar.BanSystem Mod for the [R2Northstart client](https://github.com/R2Northstar/Northstar) of Titanfall 2.
 
 ## General Information
